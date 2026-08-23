@@ -1,6 +1,12 @@
 --// Services
 
 
+--// Modules
+local Player = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/permanentlyyy/forsakenium/main/Functions/player.lua"
+))()
+
+
 --// Fluent
 local Fluent = loadstring(game:HttpGet(
     "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"
@@ -95,6 +101,9 @@ CameraSection:AddSlider("MaxZoom", {
     Min = 1,
     Max = 100,
     Rounding = 0,
+    Callback = function(value)
+        Player:SetMaxZoom(value)
+    end
 })
 
 
