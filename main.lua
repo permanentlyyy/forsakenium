@@ -86,6 +86,17 @@ SaveManager:SetFolder("Forsakenium")
 InterfaceManager:SetLibrary(Fluent)
 InterfaceManager:SetFolder("Forsakenium")
 
+--// Player Tabs
+local CameraSection = Tabs.Player:AddSection("Camera")
+
+CameraSection:AddSlider("MaxZoom", {
+    Title = "Max Zoom",
+    Default = 12,
+    Min = 1,
+    Max = 100,
+    Rounding = 0,
+})
+
 
 --// Settings Tab
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
