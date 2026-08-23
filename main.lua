@@ -106,6 +106,66 @@ CameraSection:AddSlider("MaxZoom", {
     end
 })
 
+local MovementSection = Tabs.Player:AddSection("Movement")
+
+MovementSection:AddSlider("WalkSpeed", {
+    Title = "Walk Speed",
+    Default = 16,
+    Min = 0,
+    Max = 200,
+    Rounding = 0,
+    Callback = function(value)
+        Player:SetWalkSpeed(value)
+    end
+})
+
+MovementSection:AddSlider("JumpPower", {
+    Title = "Jump Power",
+    Default = 50,
+    Min = 0,
+    Max = 300,
+    Rounding = 0,
+    Callback = function(value)
+        Player:SetJumpPower(value)
+    end
+})
+
+local TogglesSection = Tabs.Player:AddSection("Toggles")
+
+TogglesSection:AddToggle("InfiniteJump", {
+    Title = "Infinite Jump",
+    Default = false,
+    Callback = function(value)
+        Player:SetInfiniteJump(value)
+    end
+})
+
+TogglesSection:AddToggle("Noclip", {
+    Title = "Noclip",
+    Default = false,
+    Callback = function(value)
+        Player:SetNoclip(value)
+    end
+})
+
+TogglesSection:AddToggle("AntiAFK", {
+    Title = "Anti AFK",
+    Default = false,
+    Callback = function(value)
+        Player:SetAntiAFK(value)
+    end
+})
+
+local ActionsSection = Tabs.Player:AddSection("Actions")
+
+ActionsSection:AddButton({
+    Title = "Reset Character",
+    Description = "Respawns your character",
+    Callback = function()
+        Player:ResetCharacter()
+    end
+})
+
 
 --// Settings Tab
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
