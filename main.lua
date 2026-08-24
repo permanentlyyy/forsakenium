@@ -1,3 +1,9 @@
+--// Unload Previous Instance
+if _G.__Forsakenium then
+    pcall(_G.__Forsakenium)
+end
+
+
 --// Sources
 local Sources = {
     Player = "https://raw.githubusercontent.com/permanentlyyy/forsakenium/main/Functions/player.lua",
@@ -59,7 +65,7 @@ CameraSection:AddSlider("MaxZoom", {
     Title = "Max Zoom",
     Default = 12,
     Min = 1,
-    Max = 500,
+    Max = 100,
     Rounding = 0,
     Callback = function(value)
         Player:SetMaxZoom(value)
@@ -67,7 +73,7 @@ CameraSection:AddSlider("MaxZoom", {
 })
 
 CameraSection:AddSlider("FOV", {
-    Title = "FOV",
+    Title = "Field Of View",
     Default = 80,
     Min = 70,
     Max = 120,
@@ -101,6 +107,13 @@ SaveManager:BuildConfigSection(Tabs.Settings)
 
 --// Select Default Tab
 Window:SelectTab(1)
+
+
+--// Unload Handler
+_G.__Forsakenium = function()
+    Fluent:Destroy()
+    Player:Unload()
+end
 
 
 --// Load Auto-Saved Config
