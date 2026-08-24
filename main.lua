@@ -102,7 +102,7 @@ MovementSection:AddToggle("EqualizedMovement", {
 })
 
 MovementSection:AddToggle("NoLandingSlowdown", {
-    Title = "No Fall Slow",
+    Title = "No Fall Slowness",
     Default = false,
     Callback = function(value)
         Player:SetNoLandingSlowdown(value)
