@@ -1,28 +1,21 @@
---// Services
+--// Sources
+local Sources = {
+    Fluent = "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
+    SaveManager = "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua",
+    InterfaceManager = "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"
+}
 
 
---// Modules
-local Player = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/permanentlyyy/forsakenium/main/Functions/player.lua"
-))()
+--// Loader
+local function load(url)
+    return loadstring(game:HttpGet(url))()
+end
 
 
---// Fluent
-local Fluent = loadstring(game:HttpGet(
-    "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"
-))()
-
-
---// Save Manager
-local SaveManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"
-))()
-
-
---// Interface Manager
-local InterfaceManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"
-))()
+--// Libraries
+local Fluent = load(Sources.Fluent)
+local SaveManager = load(Sources.SaveManager)
+local InterfaceManager = load(Sources.InterfaceManager)
 
 
 --// Window
@@ -38,142 +31,41 @@ local Window = Fluent:CreateWindow({
 
 
 --// Tabs
-local Tabs = {
-    Player = Window:AddTab({
-        Title = "Player",
-        Icon = "user"
-    }),
+local Tabs = {}
 
-    Sprinting = Window:AddTab({
-        Title = "Sprinting",
-        Icon = "activity"
-    }),
-
-    Combat = Window:AddTab({
-        Title = "Combat",
-        Icon = "swords"
-    }),
-
-    Visuals = Window:AddTab({
-        Title = "Visuals",
-        Icon = "eye"
-    }),
-
-    Survivors = Window:AddTab({
-        Title = "Survivors",
-        Icon = "person-standing"
-    }),
-
-    Killers = Window:AddTab({
-        Title = "Killers",
-        Icon = "skull"
-    }),
-
-    Miscellaneous = Window:AddTab({
-        Title = "Miscellaneous",
-        Icon = "cloudy"
-    }),
-
-    Settings = Window:AddTab({
-        Title = "Settings",
-        Icon = "settings"
+local function addTab(id, title, icon)
+    Tabs[id] = Window:AddTab({
+        Title = title,
+        Icon = icon
     })
-}
+end
+
+addTab("Player", "Player", "user")
+addTab("Sprinting", "Sprinting", "activity")
+addTab("Combat", "Combat", "swords")
+addTab("Visuals", "Visuals", "eye")
+addTab("Survivors", "Survivors", "person-standing")
+addTab("Killers", "Killers", "skull")
+addTab("Miscellaneous", "Miscellaneous", "cloudy")
+addTab("Settings", "Settings", "settings")
 
 
---// Save Manager Setup
+--// Managers
 SaveManager:SetLibrary(Fluent)
 SaveManager:IgnoreThemeSettings()
 SaveManager:SetIgnoreIndexes({})
 SaveManager:SetFolder("Forsakenium")
 
-
---// Interface Manager Setup
 InterfaceManager:SetLibrary(Fluent)
 InterfaceManager:SetFolder("Forsakenium")
 
---// Player Tabs
-local CameraSection = Tabs.Player:AddSection("Camera")
-
-CameraSection:AddSlider("MaxZoom", {
-    Title = "Max Zoom",
-    Default = 12,
-    Min = 1,
-    Max = 100,
-    Rounding = 0,
-    Callback = function(value)
-        Player:SetMaxZoom(value)
-    end
-})
-
-local MovementSection = Tabs.Player:AddSection("Movement")
-
-MovementSection:AddSlider("WalkSpeed", {
-    Title = "Walk Speed",
-    Default = 16,
-    Min = 0,
-    Max = 200,
-    Rounding = 0,
-    Callback = function(value)
-        Player:SetWalkSpeed(value)
-    end
-})
-
-MovementSection:AddSlider("JumpPower", {
-    Title = "Jump Power",
-    Default = 50,
-    Min = 0,
-    Max = 300,
-    Rounding = 0,
-    Callback = function(value)
-        Player:SetJumpPower(value)
-    end
-})
-
-local TogglesSection = Tabs.Player:AddSection("Toggles")
-
-TogglesSection:AddToggle("InfiniteJump", {
-    Title = "Infinite Jump",
-    Default = false,
-    Callback = function(value)
-        Player:SetInfiniteJump(value)
-    end
-})
-
-TogglesSection:AddToggle("Noclip", {
-    Title = "Noclip",
-    Default = false,
-    Callback = function(value)
-        Player:SetNoclip(value)
-    end
-})
-
-TogglesSection:AddToggle("AntiAFK", {
-    Title = "Anti AFK",
-    Default = false,
-    Callback = function(value)
-        Player:SetAntiAFK(value)
-    end
-})
-
-local ActionsSection = Tabs.Player:AddSection("Actions")
-
-ActionsSection:AddButton({
-    Title = "Reset Character",
-    Description = "Respawns your character",
-    Callback = function()
-        Player:ResetCharacter()
-    end
-})
-
-
---// Settings Tab
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
 
 --// Select Default Tab
 Window:SelectTab(1)
+
 
 --// Load Auto-Saved Config
 SaveManager:LoadAutoloadConfig()
