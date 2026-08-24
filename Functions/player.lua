@@ -1,6 +1,7 @@
 local Player = {}
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -9,7 +10,9 @@ local FOV_TAG = "FOVSetting"
 
 local State = {
     FOV = nil,
-    NoclipCam = false
+    NoclipCam = false,
+    EqualizedMovement = false,
+    NoLandingSlowdown = false
 }
 
 local Connections = {}
@@ -43,6 +46,10 @@ table.insert(Connections, LocalPlayer.CharacterAdded:Connect(function(character)
     local multipliers = character:WaitForChild("FOVMultipliers", 10)
     if multipliers and State.FOV then
         applyFOV(State.FOV)
+    end
+
+    if State.NoLandingSlowdown then
+        character:SetAttribute("NoFallSlow", true)
     end
 end))
 
@@ -142,13 +149,53 @@ function Player:SetCameraNoclip(enabled)
     return true
 end
 
+function Player:SetEqualizedMovement(enabled)
+    if enabled == State.EqualizedMovement then
+        return
+    end
+    State.EqualizedMovement = enabled
+
+    if enabled then
+        Connections.DirectionalPenalty = RunService.RenderStepped:Connect(function()
+            local character = LocalPlayer.Character
+            local multipliers = character and character:FindFirstChild("SpeedMultipliers")
+            local tag = multipliers and multipliers:FindFirstChild("DirectionalMovement")
+            if tag then
+                tag.Value = 1
+            end
+        end)
+    elseif Connections.DirectionalPenalty then
+        Connections.DirectionalPenalty:Disconnect()
+        Connections.DirectionalPenalty = nil
+
+        local character = LocalPlayer.Character
+        local multipliers = character and character:FindFirstChild("SpeedMultipliers")
+        local tag = multipliers and multipliers:FindFirstChild("DirectionalMovement")
+        if tag then
+            tag.Value = 1
+        end
+    end
+end
+
+function Player:SetNoLandingSlowdown(enabled)
+    if enabled == State.NoLandingSlowdown then
+        return
+    end
+    State.NoLandingSlowdown = enabled
+
+    local character = LocalPlayer.Character
+    if character then
+        character:SetAttribute("NoFallSlow", enabled or nil)
+    end
+end
+
 function Player:Unload()
     if State.NoclipCam then
         State.NoclipCam = false
         swapPopperConstants()
     end
 
-    for _, connection in ipairs(Connections) do
+    for _, connection in pairs(Connections) do
         connection:Disconnect()
     end
     table.clear(Connections)

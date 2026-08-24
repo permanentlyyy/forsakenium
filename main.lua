@@ -91,6 +91,24 @@ CameraSection:AddToggle("CameraNoclip", {
     end
 })
 
+local MovementSection = Tabs.Player:AddSection("Movement")
+
+MovementSection:AddToggle("EqualizedMovement", {
+    Title = "Equalized Movement Speed",
+    Default = false,
+    Callback = function(value)
+        Player:SetEqualizedMovement(value)
+    end
+})
+
+MovementSection:AddToggle("NoLandingSlowdown", {
+    Title = "No Landing Slowdown",
+    Default = false,
+    Callback = function(value)
+        Player:SetNoLandingSlowdown(value)
+    end
+})
+
 
 --// Managers
 SaveManager:SetLibrary(Fluent)
