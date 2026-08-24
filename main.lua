@@ -94,7 +94,7 @@ CameraSection:AddToggle("CameraNoclip", {
 local MovementSection = Tabs.Player:AddSection("Movement")
 
 MovementSection:AddToggle("EqualizedMovement", {
-    Title = "Omni-Directional Speed",
+    Title = "Directional Movement",
     Default = false,
     Callback = function(value)
         Player:SetEqualizedMovement(value)
@@ -102,7 +102,7 @@ MovementSection:AddToggle("EqualizedMovement", {
 })
 
 MovementSection:AddToggle("NoLandingSlowdown", {
-    Title = "No Landing Penalty",
+    Title = "No Fall Slow",
     Default = false,
     Callback = function(value)
         Player:SetNoLandingSlowdown(value)
