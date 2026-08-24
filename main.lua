@@ -1,5 +1,6 @@
 --// Sources
 local Sources = {
+    Player = "https://raw.githubusercontent.com/permanentlyyy/forsakenium/main/Functions/player.lua",
     Fluent = "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
     SaveManager = "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua",
     InterfaceManager = "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"
@@ -13,6 +14,7 @@ end
 
 
 --// Libraries
+local Player = load(Sources.Player)
 local Fluent = load(Sources.Fluent)
 local SaveManager = load(Sources.SaveManager)
 local InterfaceManager = load(Sources.InterfaceManager)
@@ -48,6 +50,40 @@ addTab("Survivors", "Survivors", "person-standing")
 addTab("Killers", "Killers", "skull")
 addTab("Miscellaneous", "Miscellaneous", "cloudy")
 addTab("Settings", "Settings", "settings")
+
+
+--// Player Tab
+local CameraSection = Tabs.Player:AddSection("Camera")
+
+CameraSection:AddSlider("MaxZoom", {
+    Title = "Max Zoom",
+    Default = 12,
+    Min = 1,
+    Max = 500,
+    Rounding = 0,
+    Callback = function(value)
+        Player:SetMaxZoom(value)
+    end
+})
+
+CameraSection:AddSlider("FOV", {
+    Title = "FOV",
+    Default = 80,
+    Min = 70,
+    Max = 120,
+    Rounding = 0,
+    Callback = function(value)
+        Player:SetFOV(value)
+    end
+})
+
+CameraSection:AddToggle("CameraNoclip", {
+    Title = "Camera Noclip",
+    Default = false,
+    Callback = function(value)
+        Player:SetCameraNoclip(value)
+    end
+})
 
 
 --// Managers
