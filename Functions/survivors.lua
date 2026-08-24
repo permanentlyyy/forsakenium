@@ -9,6 +9,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local TRICK_READY_FILL = Color3.fromRGB(241, 85, 255)
 local COLOR_TOLERANCE = 0.02
+local WALL_DISTANCE = 11
 
 local State = {
     AutoTrick = false
@@ -16,6 +17,10 @@ local State = {
 
 local Connections = {}
 local LastAttempt = 0
+local VirtualInputManager = (function()
+    local ok, service = pcall(game.GetService, game, "VirtualInputManager")
+    return ok and service or nil
+end)()
 
 local function colorsMatch(a, b)
     return math.abs(a.R - b.R) < COLOR_TOLERANCE
@@ -23,7 +28,7 @@ local function colorsMatch(a, b)
         and math.abs(a.B - b.B) < COLOR_TOLERANCE
 end
 
-local function collectHighlights(highlights)
+local function getTrickHighlight()
     local assets = ReplicatedStorage:FindFirstChild("Assets")
     local survivors = assets and assets:FindFirstChild("Survivors")
     local veeronica = survivors and survivors:FindFirstChild("Veeronica")
@@ -32,7 +37,7 @@ local function collectHighlights(highlights)
     if behavior then
         local highlight = behavior:FindFirstChildOfClass("Highlight")
         if highlight then
-            table.insert(highlights, highlight)
+            return highlight
         end
     end
 
@@ -40,37 +45,53 @@ local function collectHighlights(highlights)
     if character then
         for _, descendant in ipairs(character:GetDescendants()) do
             if descendant:IsA("Highlight") then
-                table.insert(highlights, descendant)
+                return descendant
             end
         end
     end
+
+    return nil
 end
 
 local function isTrickReady()
-    local highlights = {}
-    collectHighlights(highlights)
-
-    for _, highlight in ipairs(highlights) do
-        if colorsMatch(highlight.FillColor, TRICK_READY_FILL) then
-            return true
-        end
-    end
-
-    return false
+    local highlight = getTrickHighlight()
+    return highlight ~= nil and colorsMatch(highlight.FillColor, TRICK_READY_FILL)
 end
 
-local function fireTrickInput()
-    local ok = pcall(function()
-        ContextActionService:CallFunction("TrickInput", Enum.UserInputState.Begin)
-    end)
-    if not ok then
-        return
+local function wallAhead()
+    local character = LocalPlayer.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        return false
     end
 
-    task.delay(0.12, function()
-        pcall(function()
-            ContextActionService:CallFunction("TrickInput", Enum.UserInputState.End)
+    local velocity = root.AssemblyLinearVelocity
+    local horizontal = Vector3.new(velocity.X, 0, velocity.Z)
+    local direction = horizontal.Magnitude > 4 and horizontal.Unit or root.CFrame.LookVector
+
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {character}
+
+    local result = workspace:Raycast(root.Position, direction * WALL_DISTANCE, params)
+    if not result then
+        return false
+    end
+
+    return math.abs(result.Normal:Dot(Vector3.new(0, 1, 0))) < 0.2
+end
+
+local function pressSpace()
+    if VirtualInputManager then
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, nil)
+        task.delay(0.1, function()
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, nil)
         end)
+        return true
+    end
+
+    return pcall(function()
+        ContextActionService:CallFunction("TrickInput", Enum.UserInputState.Begin)
     end)
 end
 
@@ -86,13 +107,13 @@ function Survivors:SetAutoTrick(enabled)
                 return
             end
 
-            if os.clock() - LastAttempt < 0.5 then
+            if os.clock() - LastAttempt < 0.35 then
                 return
             end
 
-            if isTrickReady() then
+            if isTrickReady() and wallAhead() then
                 LastAttempt = os.clock()
-                fireTrickInput()
+                pressSpace()
             end
         end)
     elseif Connections.AutoTrick then
