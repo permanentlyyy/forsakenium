@@ -85,7 +85,7 @@ CameraSection:AddSlider("FOV", {
 
 CameraSection:AddToggle("CameraNoclip", {
     Title = "Camera Noclip",
-    Default = false,
+    Default = Player:IsCameraNoclip(),
     Callback = function(value)
         Player:SetCameraNoclip(value)
     end
