@@ -94,7 +94,7 @@ CameraSection:AddToggle("CameraNoclip", {
 local MovementSection = Tabs.Player:AddSection("Movement")
 
 MovementSection:AddToggle("EqualizedMovement", {
-    Title = "Directional Movement",
+    Title = "No Directional Movement",
     Default = false,
     Callback = function(value)
         Player:SetEqualizedMovement(value)
