@@ -2,6 +2,7 @@ local Player = {}
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -12,7 +13,9 @@ local State = {
     FOV = nil,
     NoclipCam = false,
     EqualizedMovement = false,
-    NoLandingSlowdown = false
+    NoLandingSlowdown = false,
+    Fullbright = false,
+    NoFog = false
 }
 
 local Connections = {}
@@ -189,10 +192,87 @@ function Player:SetNoLandingSlowdown(enabled)
     end
 end
 
+function Player:SetFullbright(enabled)
+    if enabled == State.Fullbright then
+        return
+    end
+    State.Fullbright = enabled
+
+    if enabled then
+        State.SavedAmbient = Lighting.Ambient
+        State.SavedOutdoorAmbient = Lighting.OutdoorAmbient
+        State.SavedBrightness = Lighting.Brightness
+
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+        Lighting.Brightness = 2
+    elseif State.SavedAmbient then
+        Lighting.Ambient = State.SavedAmbient
+        Lighting.OutdoorAmbient = State.SavedOutdoorAmbient
+        Lighting.Brightness = State.SavedBrightness
+        State.SavedAmbient = nil
+        State.SavedOutdoorAmbient = nil
+        State.SavedBrightness = nil
+    end
+end
+
+function Player:SetNoFog(enabled)
+    if enabled == State.NoFog then
+        return
+    end
+    State.NoFog = enabled
+
+    if enabled then
+        local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+        if atmosphere then
+            State.SavedAtmosphereDensity = atmosphere.Density
+            State.SavedAtmosphereHaze = atmosphere.Haze
+        end
+        State.SavedFogEnd = Lighting.FogEnd
+        State.SavedFogStart = Lighting.FogStart
+
+        Connections.NoFogPin = RunService.RenderStepped:Connect(function()
+            local current = Lighting:FindFirstChildOfClass("Atmosphere")
+            if current then
+                current.Density = 0
+                current.Haze = 0
+            end
+            Lighting.FogEnd = 100000
+        end)
+    else
+        if Connections.NoFogPin then
+            Connections.NoFogPin:Disconnect()
+            Connections.NoFogPin = nil
+        end
+
+        local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+        if atmosphere and State.SavedAtmosphereDensity then
+            atmosphere.Density = State.SavedAtmosphereDensity
+            atmosphere.Haze = State.SavedAtmosphereHaze
+            State.SavedAtmosphereDensity = nil
+            State.SavedAtmosphereHaze = nil
+        end
+        if State.SavedFogEnd then
+            Lighting.FogEnd = State.SavedFogEnd
+            Lighting.FogStart = State.SavedFogStart
+            State.SavedFogEnd = nil
+            State.SavedFogStart = nil
+        end
+    end
+end
+
 function Player:Unload()
     if State.NoclipCam then
         State.NoclipCam = false
         swapPopperConstants()
+    end
+
+    if State.Fullbright then
+        Player:SetFullbright(false)
+    end
+
+    if State.NoFog then
+        Player:SetNoFog(false)
     end
 
     for _, connection in pairs(Connections) do

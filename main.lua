@@ -109,6 +109,24 @@ MovementSection:AddToggle("NoLandingSlowdown", {
     end
 })
 
+local LightingSection = Tabs.Player:AddSection("Lighting")
+
+LightingSection:AddToggle("Fullbright", {
+    Title = "Fullbright",
+    Default = false,
+    Callback = function(value)
+        Player:SetFullbright(value)
+    end
+})
+
+LightingSection:AddToggle("NoFog", {
+    Title = "No Fog",
+    Default = false,
+    Callback = function(value)
+        Player:SetNoFog(value)
+    end
+})
+
 
 --// Managers
 SaveManager:SetLibrary(Fluent)
