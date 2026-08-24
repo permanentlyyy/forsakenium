@@ -141,6 +141,14 @@ VeeronicaSection:AddToggle("AutoTrick", {
     end
 })
 
+VeeronicaSection:AddToggle("Sk8Control", {
+    Title = "Sk8 Control",
+    Default = false,
+    Callback = function(value)
+        Survivors:SetSk8Control(value)
+    end
+})
+
 
 --// Managers
 SaveManager:SetLibrary(Fluent)
