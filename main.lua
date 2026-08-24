@@ -53,7 +53,7 @@ local function addTab(id, title, icon)
 end
 
 addTab("Player", "Player", "user")
-addTab("Sprinting", "Sprinting", "activity")
+addTab("Generators", "Generators", "cog")
 addTab("Combat", "Combat", "swords")
 addTab("Visuals", "Visuals", "eye")
 addTab("Survivors", "Survivors", "person-standing")
