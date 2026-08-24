@@ -7,6 +7,7 @@ end
 --// Sources
 local Sources = {
     Player = "https://raw.githubusercontent.com/permanentlyyy/forsakenium/main/Functions/player.lua",
+    Survivors = "https://raw.githubusercontent.com/permanentlyyy/forsakenium/main/Functions/survivors.lua",
     Fluent = "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
     SaveManager = "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua",
     InterfaceManager = "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"
@@ -21,6 +22,7 @@ end
 
 --// Libraries
 local Player = load(Sources.Player)
+local Survivors = load(Sources.Survivors)
 local Fluent = load(Sources.Fluent)
 local SaveManager = load(Sources.SaveManager)
 local InterfaceManager = load(Sources.InterfaceManager)
@@ -128,6 +130,18 @@ LightingSection:AddToggle("NoFog", {
 })
 
 
+--// Survivors Tab
+local VeeronicaSection = Tabs.Survivors:AddSection("Veeronica")
+
+VeeronicaSection:AddToggle("AutoTrick", {
+    Title = "Auto Trick",
+    Default = false,
+    Callback = function(value)
+        Survivors:SetAutoTrick(value)
+    end
+})
+
+
 --// Managers
 SaveManager:SetLibrary(Fluent)
 SaveManager:IgnoreThemeSettings()
@@ -149,6 +163,7 @@ Window:SelectTab(1)
 _G.__Forsakenium = function()
     Fluent:Destroy()
     Player:Unload()
+    Survivors:Unload()
 end
 
 
