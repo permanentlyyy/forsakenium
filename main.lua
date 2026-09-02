@@ -154,6 +154,46 @@ PuzzleSection:AddSlider("PuzzlePathTransparency", {
 })
 
 
+--// Visuals Tab
+local KillerSection = Tabs.Visuals:AddSection("Killer")
+
+KillerSection:AddToggle("KillerESP", {
+    Title = "Killer ESP",
+    Default = false
+})
+
+KillerSection:AddToggle("ShowKillerName", {
+    Title = "Show Killer Name",
+    Default = false
+})
+
+KillerSection:AddToggle("ShowKillerHealth", {
+    Title = "Show Killer Health",
+    Default = false
+})
+
+KillerSection:AddSlider("KillerFillTransparency", {
+    Title = "Fill Transparency",
+    Default = 0.7,
+    Min = 0,
+    Max = 1,
+    Rounding = 2
+})
+
+KillerSection:AddSlider("KillerOutlineTransparency", {
+    Title = "Outline Transparency",
+    Default = 0.3,
+    Min = 0,
+    Max = 1,
+    Rounding = 2
+})
+
+KillerSection:AddColorpicker("KillerColor", {
+    Title = "Killer Color",
+    Default = Color3.fromRGB(255, 50, 50)
+})
+
+
 --// Managers
 SaveManager:SetLibrary(Fluent)
 SaveManager:IgnoreThemeSettings()
