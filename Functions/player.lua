@@ -54,9 +54,8 @@ local function isBufferValid(buf)
 end
 
 local lastFire = 0
-local toggleFireToken = 0
-local FREEZE_BEFORE = 0.5
-local UNFREEZE_AFTER = 0.5
+local FREEZE_TIME = 1
+local UNFREEZE_TIME = 1
 
 local function stopVelocity()
     local char = LocalPlayer.Character
@@ -92,25 +91,25 @@ local function firePositionPacket(force)
 
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local frozeIt = false
 
-    if hrp and char.Parent and not hrp.Anchored then
+    if hrp and char.Parent then
         hrp.Anchored = true
-        frozeIt = true
-    end
-    stopVelocity()
+        stopVelocity()
+        task.wait(FREEZE_TIME)
 
-    task.wait(FREEZE_BEFORE)
-    TargetEvent:FireServer(1, { PacketBuffer })
+        if not State.Enabled then
+            if hrp.Parent then
+                hrp.Anchored = false
+            end
+            return
+        end
 
-    if frozeIt then
-        task.delay(UNFREEZE_AFTER, function()
-            pcall(function()
-                if hrp.Parent then
-                    hrp.Anchored = false
-                end
-            end)
-        end)
+        TargetEvent:FireServer(1, { PacketBuffer })
+        task.wait(UNFREEZE_TIME)
+
+        if hrp.Parent then
+            hrp.Anchored = false
+        end
     end
 end
 
@@ -185,17 +184,14 @@ function Player:SetInvincible(enabled)
 
     if enabled then
         if isSurvivorOrKiller() then
-            stopVelocity()
-            toggleFireToken += 1
-            local myToken = toggleFireToken
-            task.delay(1, function()
-                if toggleFireToken == myToken and State.Enabled then
-                    firePositionPacket(true)
-                end
-            end)
+            firePositionPacket(true)
         end
     else
-        toggleFireToken += 1
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp and char.Parent then
+            hrp.Anchored = false
+        end
     end
 end
 
