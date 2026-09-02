@@ -74,6 +74,18 @@ StaminaSection:AddToggle("AlwaysSprint", {
     Default = false
 })
 
+local CharacterSection = Tabs.Player:AddSection("Character")
+
+CharacterSection:AddToggle("GodMode", {
+    Title = "Damage Immunity",
+    Default = false
+})
+
+CharacterSection:AddToggle("Invisibility", {
+    Title = "Invisibility",
+    Default = false
+})
+
 
 --// Managers
 SaveManager:SetLibrary(Fluent)
