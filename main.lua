@@ -241,6 +241,13 @@ MiscellaneousSection:AddDropdown("ObjectESP", {
     Default = {}
 })
 
+MiscellaneousSection:AddDropdown("Tracers", {
+    Title = "Tracers",
+    Values = { "Killer", "Survivor", "Generator", "Item", "Tripwire", "Mine" },
+    Multi = true,
+    Default = {}
+})
+
 
 --// Managers
 SaveManager:SetLibrary(Fluent)
