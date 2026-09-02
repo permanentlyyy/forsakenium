@@ -77,7 +77,7 @@ StaminaSection:AddToggle("AlwaysSprint", {
 local CharacterSection = Tabs.Player:AddSection("Character")
 
 CharacterSection:AddToggle("GodMode", {
-    Title = "Damage Immunity",
+    Title = "Invincible",
     Default = false
 })
 
