@@ -48,7 +48,6 @@ end
 
 addTab("Player", "Player", "user")
 addTab("Generators", "Generators", "cog")
-addTab("Combat", "Combat", "swords")
 addTab("Visuals", "Visuals", "eye")
 addTab("Survivors", "Survivors", "person-standing")
 addTab("Killers", "Killers", "skull")
