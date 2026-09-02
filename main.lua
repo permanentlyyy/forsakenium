@@ -139,6 +139,21 @@ GridSection:AddSlider("Size", {
     Rounding = 0
 })
 
+local PuzzleSection = Tabs.Generators:AddSection("Puzzle Helper")
+
+PuzzleSection:AddToggle("ShowCorrectPuzzlePath", {
+    Title = "Show Correct Puzzle Path",
+    Default = false
+})
+
+PuzzleSection:AddSlider("PuzzlePathTransparency", {
+    Title = "Transparency",
+    Default = 50,
+    Min = 0,
+    Max = 100,
+    Rounding = 0
+})
+
 
 --// Managers
 SaveManager:SetLibrary(Fluent)
