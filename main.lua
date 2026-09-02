@@ -126,7 +126,12 @@ AutomationSection:AddSlider("RandomSolveMin", {
 
 local GridSection = Tabs.Generators:AddSection("Grid")
 
-GridSection:AddSlider("GridSize", {
+GridSection:AddToggle("GridSize", {
+    Title = "Grid Size",
+    Default = false
+})
+
+GridSection:AddSlider("Size", {
     Title = "Size",
     Default = 10,
     Min = 2,
