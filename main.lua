@@ -193,6 +193,44 @@ KillerSection:AddColorpicker("KillerColor", {
     Default = Color3.fromRGB(255, 50, 50)
 })
 
+local SurvivorSection = Tabs.Visuals:AddSection("Survivor")
+
+SurvivorSection:AddToggle("SurvivorESP", {
+    Title = "Survivor ESP",
+    Default = false
+})
+
+SurvivorSection:AddToggle("ShowSurvivorName", {
+    Title = "Show Survivor Name",
+    Default = false
+})
+
+SurvivorSection:AddToggle("ShowSurvivorHealth", {
+    Title = "Show Survivor Health",
+    Default = false
+})
+
+SurvivorSection:AddSlider("SurvivorFillTransparency", {
+    Title = "Fill Transparency",
+    Default = 0.7,
+    Min = 0,
+    Max = 1,
+    Rounding = 2
+})
+
+SurvivorSection:AddSlider("SurvivorOutlineTransparency", {
+    Title = "Outline Transparency",
+    Default = 0.3,
+    Min = 0,
+    Max = 1,
+    Rounding = 2
+})
+
+SurvivorSection:AddColorpicker("SurvivorColor", {
+    Title = "Survivor Color",
+    Default = Color3.fromRGB(50, 255, 50)
+})
+
 
 --// Managers
 SaveManager:SetLibrary(Fluent)
