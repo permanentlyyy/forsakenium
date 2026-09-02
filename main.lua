@@ -46,14 +46,32 @@ local function addTab(id, title, icon)
     })
 end
 
-addTab("Player", "Player", "user")
-addTab("Generators", "Generators", "cog")
+addTab("Player", "Player", "user")addTab("Generators", "Generators", "cog")
 addTab("Combat", "Combat", "swords")
 addTab("Visuals", "Visuals", "eye")
 addTab("Survivors", "Survivors", "person-standing")
 addTab("Killers", "Killers", "skull")
 addTab("Miscellaneous", "Miscellaneous", "cloudy")
 addTab("Settings", "Settings", "settings")
+
+
+--// Player Tab
+local StaminaSection = Tabs.Player:AddSection("Stamina")
+
+StaminaSection:AddToggle("InfiniteStamina", {
+    Title = "Infinite Stamina",
+    Default = false
+})
+
+StaminaSection:AddToggle("ShowLegitStaminaView", {
+    Title = "Show Legit Stamina View",
+    Default = false
+})
+
+StaminaSection:AddToggle("AlwaysSprint", {
+    Title = "Always Sprint",
+    Default = false
+})
 
 
 --// Managers
