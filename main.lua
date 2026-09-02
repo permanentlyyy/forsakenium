@@ -102,7 +102,7 @@ AutomationSection:AddToggle("RandomAutoSolveSpeed", {
 
 AutomationSection:AddSlider("SolveSpeed", {
     Title = "Solve Speed",
-    Default = 4,
+    Default = 4.5,
     Min = 1.5,
     Max = 10,
     Rounding = 1
@@ -110,7 +110,7 @@ AutomationSection:AddSlider("SolveSpeed", {
 
 AutomationSection:AddSlider("RandomSolveMax", {
     Title = "Random Solve Max",
-    Default = 8,
+    Default = 10,
     Min = 1,
     Max = 10,
     Rounding = 1
@@ -118,9 +118,9 @@ AutomationSection:AddSlider("RandomSolveMax", {
 
 AutomationSection:AddSlider("RandomSolveMin", {
     Title = "Random Solve Min",
-    Default = 2,
+    Default = 1.5,
     Min = 1,
-    Max = 20,
+    Max = 10,
     Rounding = 1
 })
 
