@@ -182,6 +182,22 @@ for _, name in ipairs({
 end
 
 
+--// Animations Tab
+local AnimationChangerSection = Tabs.Animations:AddSection("Animation Changer")
+
+AnimationChangerSection:AddDropdown("SelectKillerAnimations", {
+    Title = "Killer",
+    Values = { "c00lkidd", "Slasher", "John Doe", "Noli", "1х1х1х1", "Guest 666", "Nosferatu", "Azure" },
+    Multi = false,
+    Default = "c00lkidd"
+})
+
+AnimationChangerSection:AddToggle("EnableKillerAnimations", {
+    Title = "Enable Killer Animations",
+    Default = false
+})
+
+
 --// Miscellaneous Tab
 local MiscLightingSection = Tabs.Miscellaneous:AddSection("Lighting")
 
