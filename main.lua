@@ -155,6 +155,28 @@ PuzzleSection:AddSlider("PuzzlePathTransparency", {
 })
 
 
+--// Survivors Tab
+local SurvivorSections = {}
+
+for _, name in ipairs({
+    "Shedletsky", "Elliot", "Noob", "Jane Doe", "Builderman", "007n7",
+    "Two Time", "Guest 1337", "Taph", "Dusekkar", "Veeronica", "Chance"
+}) do
+    SurvivorSections[name] = Tabs.Survivors:AddSection(name)
+end
+
+
+--// Killers Tab
+local KillerSections = {}
+
+for _, name in ipairs({
+    "c00lkidd", "Slasher", "John Doe", "Noli", "1x1x1x1",
+    "Guest 666", "Nosferatu", "Azure"
+}) do
+    KillerSections[name] = Tabs.Killers:AddSection(name)
+end
+
+
 --// Visuals Tab
 local KillerSection = Tabs.Visuals:AddSection("Killer")
 
