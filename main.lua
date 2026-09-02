@@ -177,6 +177,63 @@ for _, name in ipairs({
 end
 
 
+--// Miscellaneous Tab
+local MiscLightingSection = Tabs.Miscellaneous:AddSection("Lighting")
+
+MiscLightingSection:AddToggle("Fullbright", {
+    Title = "Fullbright",
+    Default = false
+})
+
+MiscLightingSection:AddToggle("NoFog", {
+    Title = "No Fog",
+    Default = false
+})
+
+local MiscCameraSection = Tabs.Miscellaneous:AddSection("Camera")
+
+MiscCameraSection:AddToggle("InfiniteZoom", {
+    Title = "Infinite Zoom",
+    Default = false
+})
+
+MiscCameraSection:AddToggle("CameraNoclip", {
+    Title = "Camera Noclip",
+    Default = false
+})
+
+local DeviceSection = Tabs.Miscellaneous:AddSection("Device Spoofer")
+
+DeviceSection:AddDropdown("ChooseDevice", {
+    Title = "Choose Device",
+    Values = { "PC", "Mobile", "Console", "Unknown" },
+    Multi = false,
+    Default = "PC"
+})
+
+local PrivacySection = Tabs.Miscellaneous:AddSection("Privacy")
+
+PrivacySection:AddToggle("ShowHiddenStats", {
+    Title = "Show Hidden Stats",
+    Default = false
+})
+
+PrivacySection:AddToggle("HideName", {
+    Title = "Hide Name",
+    Default = false
+})
+
+local MiscFOVSection = Tabs.Miscellaneous:AddSection("Field of View")
+
+MiscFOVSection:AddSlider("CustomFOV", {
+    Title = "Custom FOV",
+    Default = 80,
+    Min = 70,
+    Max = 120,
+    Rounding = 0
+})
+
+
 --// Visuals Tab
 local KillerSection = Tabs.Visuals:AddSection("Killer")
 
