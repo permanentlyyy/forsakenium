@@ -54,8 +54,7 @@ local function isBufferValid(buf)
 end
 
 local lastFire = 0
-local FREEZE_TIME = 1
-local UNFREEZE_TIME = 1
+local FREEZE_TIME = 1.5
 
 local function stopVelocity()
     local char = LocalPlayer.Character
@@ -93,8 +92,8 @@ local function firePositionPacket(force)
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
     if hrp and char.Parent then
-        hrp.Anchored = true
         stopVelocity()
+        hrp.Anchored = true
         task.wait(FREEZE_TIME)
 
         if not State.Enabled then
@@ -105,7 +104,6 @@ local function firePositionPacket(force)
         end
 
         TargetEvent:FireServer(1, { PacketBuffer })
-        task.wait(UNFREEZE_TIME)
 
         if hrp.Parent then
             hrp.Anchored = false
