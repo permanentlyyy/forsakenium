@@ -133,13 +133,13 @@ GridSection:AddToggle("GridSize", {
 
 GridSection:AddSlider("Size", {
     Title = "Size",
-    Default = 10,
+    Default = 7,
     Min = 2,
     Max = 30,
     Rounding = 0
 })
 
-local PuzzleSection = Tabs.Generators:AddSection("Puzzle Helper")
+local PuzzleSection = Tabs.Generators:AddSection("Puzzle")
 
 PuzzleSection:AddToggle("ShowCorrectPuzzlePath", {
     Title = "Show Correct Puzzle Path",
