@@ -86,6 +86,11 @@ CharacterSection:AddToggle("Invisibility", {
     Default = false
 })
 
+CharacterSection:AddToggle("SilentFootsteps", {
+    Title = "Silent Footsteps",
+    Default = false
+})
+
 
 --// Generators Tab
 local AutomationSection = Tabs.Generators:AddSection("Automation")
