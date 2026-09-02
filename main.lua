@@ -124,6 +124,16 @@ AutomationSection:AddSlider("RandomSolveMin", {
     Rounding = 1
 })
 
+local GridSection = Tabs.Generators:AddSection("Grid")
+
+GridSection:AddSlider("GridSize", {
+    Title = "Size",
+    Default = 10,
+    Min = 2,
+    Max = 30,
+    Rounding = 0
+})
+
 
 --// Managers
 SaveManager:SetLibrary(Fluent)
