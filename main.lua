@@ -159,8 +159,8 @@ PuzzleSection:AddSlider("PuzzlePathTransparency", {
 local SurvivorSections = {}
 
 for _, name in ipairs({
-    "Shedletsky", "Elliot", "Noob", "Jane Doe", "Builderman", "007n7",
-    "Two Time", "Guest 1337", "Taph", "Dusekkar", "Veeronica", "Chance"
+    "Elliot", "Noob", "Jane Doe", "007n7",
+    "Guest 1337", "Dusekkar", "Veeronica", "Chance"
 }) do
     SurvivorSections[name] = Tabs.Survivors:AddSection(name)
 end
