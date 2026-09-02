@@ -197,7 +197,7 @@ AnimationChangerSection:AddToggle("EnableKillerAnimations", {
     Default = false
 })
 
-local AnimationsMiscSection = Tabs.Animations:AddSection("Misc")
+local AnimationsMiscSection = Tabs.Animations:AddSection("Miscellaneous")
 
 AnimationsMiscSection:AddToggle("EmoteAsKiller", {
     Title = "Emote as Killer",
