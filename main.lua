@@ -87,6 +87,44 @@ CharacterSection:AddToggle("Invisibility", {
 })
 
 
+--// Generators Tab
+local AutomationSection = Tabs.Generators:AddSection("Automation")
+
+AutomationSection:AddToggle("AutoSolve", {
+    Title = "Auto Solve",
+    Default = false
+})
+
+AutomationSection:AddToggle("RandomAutoSolveSpeed", {
+    Title = "Random Auto Solve Speed",
+    Default = false
+})
+
+AutomationSection:AddSlider("SolveSpeed", {
+    Title = "Solve Speed",
+    Default = 4,
+    Min = 1.5,
+    Max = 10,
+    Rounding = 1
+})
+
+AutomationSection:AddSlider("RandomSolveMax", {
+    Title = "Random Solve Max",
+    Default = 8,
+    Min = 1,
+    Max = 10,
+    Rounding = 1
+})
+
+AutomationSection:AddSlider("RandomSolveMin", {
+    Title = "Random Solve Min",
+    Default = 2,
+    Min = 1,
+    Max = 20,
+    Rounding = 1
+})
+
+
 --// Managers
 SaveManager:SetLibrary(Fluent)
 SaveManager:IgnoreThemeSettings()
