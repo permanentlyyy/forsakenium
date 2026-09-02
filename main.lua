@@ -232,6 +232,38 @@ SurvivorSection:AddColorpicker("SurvivorColor", {
     Default = Color3.fromRGB(50, 255, 50)
 })
 
+local MiscellaneousSection = Tabs.Visuals:AddSection("Miscellaneous")
+
+MiscellaneousSection:AddToggle("GeneratorESP", {
+    Title = "Generator ESP",
+    Default = false
+})
+
+MiscellaneousSection:AddToggle("ItemESP", {
+    Title = "Item ESP",
+    Default = false
+})
+
+MiscellaneousSection:AddToggle("TripwireESP", {
+    Title = "Tripwire ESP",
+    Default = false
+})
+
+MiscellaneousSection:AddToggle("MineESP", {
+    Title = "Mine ESP",
+    Default = false
+})
+
+MiscellaneousSection:AddToggle("RitualESP", {
+    Title = "Ritual ESP",
+    Default = false
+})
+
+MiscellaneousSection:AddToggle("GraffitiESP", {
+    Title = "Graffiti ESP",
+    Default = false
+})
+
 
 --// Managers
 SaveManager:SetLibrary(Fluent)
