@@ -170,7 +170,7 @@ end
 local KillerSections = {}
 
 for _, name in ipairs({
-    "c00lkidd", "Slasher", "John Doe", "Noli", "1x1x1x1",
+    "c00lkidd", "Slasher", "John Doe", "Noli", "1х1х1х1",
     "Guest 666", "Nosferatu", "Azure"
 }) do
     KillerSections[name] = Tabs.Killers:AddSection(name)
