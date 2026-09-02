@@ -54,6 +54,7 @@ local function isBufferValid(buf)
 end
 
 local lastFire = 0
+local toggleFireToken = 0
 local FREEZE_BEFORE = 0.5
 local UNFREEZE_AFTER = 0.5
 
@@ -97,13 +98,9 @@ local function firePositionPacket(force)
         hrp.Anchored = true
         frozeIt = true
     end
+    stopVelocity()
 
-    local freezeStart = os.clock()
-    while os.clock() - freezeStart < FREEZE_BEFORE do
-        stopVelocity()
-        task.wait()
-    end
-
+    task.wait(FREEZE_BEFORE)
     TargetEvent:FireServer(1, { PacketBuffer })
 
     if frozeIt then
@@ -188,14 +185,17 @@ function Player:SetInvincible(enabled)
 
     if enabled then
         if isSurvivorOrKiller() then
-            firePositionPacket(true)
+            stopVelocity()
+            toggleFireToken += 1
+            local myToken = toggleFireToken
+            task.delay(1, function()
+                if toggleFireToken == myToken and State.Enabled then
+                    firePositionPacket(true)
+                end
+            end)
         end
     else
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp and char.Parent then
-            hrp.Anchored = false
-        end
+        toggleFireToken += 1
     end
 end
 
