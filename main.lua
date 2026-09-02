@@ -14,7 +14,7 @@ local Sources = {
 
 --// Loader
 local function load(url)
-    return loadstring(game:HttpGet(url))()
+    return loadstring(game:HttpGet(url .. "?v=" .. os.time()))()
 end
 
 
