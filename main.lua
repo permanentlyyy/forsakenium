@@ -6,7 +6,6 @@ end
 
 --// Sources
 local Sources = {
-    Player = "https://raw.githubusercontent.com/permanentlyyy/forsakenium/main/Functions/player.lua",
     Fluent = "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
     SaveManager = "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua",
     InterfaceManager = "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"
@@ -20,7 +19,6 @@ end
 
 
 --// Libraries
-local Player = load(Sources.Player)
 local Fluent = load(Sources.Fluent)
 local SaveManager = load(Sources.SaveManager)
 local InterfaceManager = load(Sources.InterfaceManager)
@@ -80,10 +78,7 @@ local CharacterSection = Tabs.Player:AddSection("Character")
 
 CharacterSection:AddToggle("GodMode", {
     Title = "Invincible",
-    Default = false,
-    Callback = function(value)
-        Player:SetInvincible(value)
-    end
+    Default = false
 })
 
 CharacterSection:AddToggle("Invisibility", {
@@ -380,7 +375,6 @@ Window:SelectTab(1)
 
 --// Unload Handler
 _G.__Forsakenium = function()
-    Player:Unload()
     Fluent:Destroy()
 end
 
