@@ -52,6 +52,7 @@ addTab("Visuals", "Visuals", "eye")
 addTab("Survivors", "Survivors", "person-standing")
 addTab("Killers", "Killers", "skull")
 addTab("Animations", "Animations", "clapperboard")
+addTab("Miscellaneous", "Miscellaneous", "cloudy")
 addTab("Settings", "Settings", "settings")
 
 
