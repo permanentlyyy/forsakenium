@@ -177,8 +177,6 @@ local function stopInvisibility()
         InvisState.Watchdog:Disconnect()
         InvisState.Watchdog = nil
     end
-
-    print("[Forsakenium] Invisibility stopped")
 end
 
 local function setupInvisibility(character)
@@ -220,8 +218,6 @@ local function setupInvisibility(character)
             InvisState.Track:AdjustSpeed(0)
         end
     end)
-
-    print("[Forsakenium] Invisibility active")
 end
 
 local function isInRound()
@@ -235,7 +231,6 @@ local function isInRound()
 end
 
 function Player:SetInvisibility(enabled)
-    print("[Forsakenium] Invisibility toggled: " .. tostring(enabled))
     InvisState.Desired = enabled
 
     if not enabled then
@@ -252,17 +247,10 @@ function Player:SetInvisibility(enabled)
 end
 
 task.spawn(function()
-    local lastInRound = nil
-
     while Running do
         task.wait(0.25)
         pcall(function()
             local inRound = isInRound()
-
-            if inRound ~= lastInRound then
-                lastInRound = inRound
-                print("[Forsakenium] Round state: " .. tostring(inRound))
-            end
 
             if InvisState.Desired and inRound and not InvisState.Active then
                 local char = LocalPlayer.Character
