@@ -72,6 +72,21 @@ end
 local hitbox, stillTicks, lastPos = nil, 0, nil
 local Running = true
 
+local FootstepsState = {
+    Enabled = false
+}
+
+local function applyFootstepsMuted(char)
+    if not char then
+        return
+    end
+    if FootstepsState.Enabled then
+        char:SetAttribute("FootstepsMuted", true)
+    else
+        char:SetAttribute("FootstepsMuted", nil)
+    end
+end
+
 local function grabHitbox(char)
     task.spawn(function()
         hitbox = char:WaitForChild("QueryHitbox", 10)
@@ -85,6 +100,7 @@ end
 table.insert(State.Connections, LocalPlayer.CharacterAdded:Connect(function(char)
     hitbox, stillTicks, lastPos = nil, 0, nil
     grabHitbox(char)
+    task.delay(0.1, applyFootstepsMuted, char)
 end))
 
 task.spawn(function()
@@ -264,10 +280,20 @@ task.spawn(function()
     end
 end)
 
+function Player:SetSilentFootsteps(enabled)
+    if FootstepsState.Enabled == enabled then
+        return
+    end
+    FootstepsState.Enabled = enabled
+    applyFootstepsMuted(LocalPlayer.Character)
+end
+
 function Player:Unload()
     Running = false
     State.Enabled = false
+    FootstepsState.Enabled = false
     stopInvisibility()
+    applyFootstepsMuted(LocalPlayer.Character)
     for _, conn in ipairs(State.Connections) do
         pcall(function()
             conn:Disconnect()

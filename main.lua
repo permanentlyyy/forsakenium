@@ -96,7 +96,10 @@ CharacterSection:AddToggle("Invisibility", {
 
 CharacterSection:AddToggle("SilentFootsteps", {
     Title = "Silent Footsteps",
-    Default = false
+    Default = false,
+    Callback = function(value)
+        Player:SetSilentFootsteps(value)
+    end
 })
 
 
