@@ -84,11 +84,6 @@ end
 table.insert(State.Connections, LocalPlayer.CharacterAdded:Connect(function(char)
     hitbox, stillTicks, lastPos = nil, 0, nil
     grabHitbox(char)
-
-    task.wait(1)
-    if InvisState.Enabled and char.Parent then
-        setupInvisibility(char)
-    end
 end))
 
 task.spawn(function()
@@ -208,15 +203,35 @@ function Player:SetInvisibility(enabled)
     end
     InvisState.Enabled = enabled
 
-    if enabled then
-        local character = LocalPlayer.Character
-        if character then
-            setupInvisibility(character)
-        end
-    else
+    if not enabled then
         stopInvisibility()
     end
 end
+
+local function isInRound()
+    local char = LocalPlayer.Character
+    local parent = char and char.Parent
+    if not parent then
+        return false
+    end
+    return parent.Name == "Survivors" or parent.Name == "Killers"
+end
+
+task.spawn(function()
+    while Running do
+        task.wait(0.25)
+        local inRound = isInRound()
+
+        if InvisState.Enabled and inRound and not InvisState.Track then
+            local char = LocalPlayer.Character
+            if char then
+                setupInvisibility(char)
+            end
+        elseif (not InvisState.Enabled or not inRound) and InvisState.Track then
+            stopInvisibility()
+        end
+    end
+end)
 
 function Player:Unload()
     Running = false
