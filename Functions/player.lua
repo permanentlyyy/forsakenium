@@ -320,7 +320,7 @@ table.insert(State.Connections, RunService.Heartbeat:Connect(function()
 
     if AlwaysSprintState.Enabled and not Sprinting.IsSprinting then
         local floor = StaminaThreshold > 0 and StaminaThreshold or (Sprinting.MinStamina or 0)
-        if (Sprinting.Stamina or 0) > floor + 10 then
+        if (Sprinting.Stamina or 0) > floor then
             startSprint()
         end
     end
