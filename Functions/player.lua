@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
 local Event = ReplicatedStorage.Modules.Network.Network.UnreliableRemoteEvent
+local RoundRemote = ReplicatedStorage.Modules.Network.Network.RemoteEvent
 
 local RETURN_RADIUS = 100
 local STILL_TICKS = 3
@@ -208,13 +209,21 @@ function Player:SetInvisibility(enabled)
     end
 end
 
-local function isInRound()
-    local char = LocalPlayer.Character
-    local parent = char and char.Parent
-    if not parent then
-        return false
+local RoundActive = false
+
+table.insert(State.Connections, RoundRemote.OnClientEvent:Connect(function(connName, msg)
+    if connName ~= "HandleGamemode" then
+        return
     end
-    return parent.Name == "Survivors" or parent.Name == "Killers"
+    if msg == "Init" then
+        RoundActive = true
+    elseif msg == "Destroy" then
+        RoundActive = false
+    end
+end))
+
+local function isInRound()
+    return RoundActive
 end
 
 task.spawn(function()
