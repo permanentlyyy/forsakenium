@@ -1,6 +1,7 @@
 local Player = {}
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
@@ -142,13 +143,19 @@ end
 local INVIS_ANIMATION_ID = "rbxassetid://75804462760596"
 
 local InvisState = {
-    Enabled = false,
+    Desired = false,
+    Active = false,
     Track = nil,
     Animation = nil,
     Watchdog = nil
 }
 
 local function stopInvisibility()
+    if not InvisState.Active then
+        return
+    end
+    InvisState.Active = false
+
     if InvisState.Track then
         pcall(function()
             InvisState.Track:Stop()
@@ -170,13 +177,14 @@ local function stopInvisibility()
         InvisState.Watchdog:Disconnect()
         InvisState.Watchdog = nil
     end
+
+    print("[Forsakenium] Invisibility stopped")
 end
 
 local function setupInvisibility(character)
-    stopInvisibility()
-
     local humanoid = character:WaitForChild("Humanoid", 10)
     if not humanoid then
+        warn("[Forsakenium] Invisibility: no humanoid")
         return
     end
 
@@ -188,38 +196,32 @@ local function setupInvisibility(character)
 
     local animation = Instance.new("Animation")
     animation.AnimationId = INVIS_ANIMATION_ID
-    InvisState.Animation = animation
 
     local ok, track = pcall(function()
         return animator:LoadAnimation(animation)
     end)
     if not ok or not track then
+        warn("[Forsakenium] Invisibility: load failed " .. tostring(track))
         return
     end
 
-    InvisState.Track = track
     track.Looped = true
     track.Priority = Enum.AnimationPriority.Action4
     track:Play()
     track:AdjustSpeed(0)
 
-    InvisState.Watchdog = game:GetService("RunService").Heartbeat:Connect(function()
+    InvisState.Track = track
+    InvisState.Animation = animation
+    InvisState.Active = true
+
+    InvisState.Watchdog = RunService.Heartbeat:Connect(function()
         if InvisState.Track and not InvisState.Track.IsPlaying then
             InvisState.Track:Play()
             InvisState.Track:AdjustSpeed(0)
         end
     end)
-end
 
-function Player:SetInvisibility(enabled)
-    if InvisState.Enabled == enabled then
-        return
-    end
-    InvisState.Enabled = enabled
-
-    if not enabled then
-        stopInvisibility()
-    end
+    print("[Forsakenium] Invisibility active")
 end
 
 local function isInRound()
@@ -232,18 +234,42 @@ local function isInRound()
     return name == "Survivors" or name == "Killers"
 end
 
+function Player:SetInvisibility(enabled)
+    print("[Forsakenium] Invisibility toggled: " .. tostring(enabled))
+    InvisState.Desired = enabled
+
+    if not enabled then
+        stopInvisibility()
+        return
+    end
+
+    if isInRound() then
+        local char = LocalPlayer.Character
+        if char then
+            setupInvisibility(char)
+        end
+    end
+end
+
 task.spawn(function()
+    local lastInRound = nil
+
     while Running do
         task.wait(0.25)
         pcall(function()
             local inRound = isInRound()
 
-            if InvisState.Enabled and inRound and not InvisState.Track then
+            if inRound ~= lastInRound then
+                lastInRound = inRound
+                print("[Forsakenium] Round state: " .. tostring(inRound))
+            end
+
+            if InvisState.Desired and inRound and not InvisState.Active then
                 local char = LocalPlayer.Character
                 if char then
                     setupInvisibility(char)
                 end
-            elseif (not InvisState.Enabled or not inRound) and InvisState.Track then
+            elseif (not InvisState.Desired or not inRound) and InvisState.Active then
                 stopInvisibility()
             end
         end)
