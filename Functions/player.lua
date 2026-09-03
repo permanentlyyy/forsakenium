@@ -191,7 +191,13 @@ local function setupInvisibility(character)
     animation.AnimationId = INVIS_ANIMATION_ID
     InvisState.Animation = animation
 
-    local track = animator:LoadAnimation(animation)
+    local ok, track = pcall(function()
+        return animator:LoadAnimation(animation)
+    end)
+    if not ok or not track then
+        return
+    end
+
     InvisState.Track = track
     track.Looped = true
     track.Priority = Enum.AnimationPriority.Action4
@@ -255,16 +261,18 @@ end
 task.spawn(function()
     while Running do
         task.wait(0.25)
-        local inRound = isInRound()
+        pcall(function()
+            local inRound = isInRound()
 
-        if InvisState.Enabled and inRound and not InvisState.Track then
-            local char = LocalPlayer.Character
-            if char then
-                setupInvisibility(char)
+            if InvisState.Enabled and inRound and not InvisState.Track then
+                local char = LocalPlayer.Character
+                if char then
+                    setupInvisibility(char)
+                end
+            elseif (not InvisState.Enabled or not inRound) and InvisState.Track then
+                stopInvisibility()
             end
-        elseif (not InvisState.Enabled or not inRound) and InvisState.Track then
-            stopInvisibility()
-        end
+        end)
     end
 end)
 
