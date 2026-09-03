@@ -73,7 +73,10 @@ StaminaSection:AddToggle("ShowLegitStaminaView", {
 
 StaminaSection:AddToggle("AlwaysSprint", {
     Title = "Always Sprint",
-    Default = false
+    Default = false,
+    Callback = function(value)
+        Player:SetAlwaysSprint(value)
+    end
 })
 
 local CharacterSection = Tabs.Player:AddSection("Character")

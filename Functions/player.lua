@@ -262,6 +262,54 @@ function Player:SetInvisibility(enabled)
     end
 end
 
+local Sprinting = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
+
+local AlwaysSprintState = {
+    Enabled = false
+}
+
+local function startSprint()
+    if not Sprinting.CanSprint or Sprinting.IsSprinting then
+        return
+    end
+    if (Sprinting.Stamina or 0) <= (Sprinting.MinStamina or 0) then
+        return
+    end
+    Sprinting.IsSprinting = true
+    if Sprinting.__sprintedEvent then
+        Sprinting.__sprintedEvent:Fire(true)
+    end
+    pcall(function()
+        Sprinting:Toggle(true)
+    end)
+end
+
+local function stopSprint()
+    if not Sprinting.IsSprinting then
+        return
+    end
+    Sprinting.IsSprinting = false
+    if Sprinting.__sprintedEvent then
+        Sprinting.__sprintedEvent:Fire(false)
+    end
+    pcall(function()
+        Sprinting:Toggle(false)
+    end)
+end
+
+function Player:SetAlwaysSprint(enabled)
+    if AlwaysSprintState.Enabled == enabled then
+        return
+    end
+    AlwaysSprintState.Enabled = enabled
+
+    if enabled then
+        startSprint()
+    else
+        stopSprint()
+    end
+end
+
 task.spawn(function()
     while Running do
         task.wait(0.25)
@@ -275,6 +323,10 @@ task.spawn(function()
                 end
             elseif (not InvisState.Desired or not inRound) and InvisState.Active then
                 stopInvisibility()
+            end
+
+            if AlwaysSprintState.Enabled and not Sprinting.IsSprinting then
+                startSprint()
             end
         end)
     end
