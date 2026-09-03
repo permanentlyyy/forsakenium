@@ -15,7 +15,7 @@ local Sources = {
 
 --// Loader
 local function load(url)
-    return loadstring(game:HttpGet(url .. "?v=" .. os.time()))()
+    return loadstring(game:HttpGet(url .. "?nocache=" .. tostring(tick())))()
 end
 
 
