@@ -313,13 +313,18 @@ function Player:SetAlwaysSprint(enabled)
     end
 end
 
-function Player:SetStaminaManagement(threshold)
-    StaminaThreshold = threshold or 0
-
+table.insert(State.Connections, RunService.Heartbeat:Connect(function()
     if StaminaThreshold > 0 and Sprinting.IsSprinting and (Sprinting.Stamina or 0) <= StaminaThreshold then
         stopSprint()
     end
-end
+
+    if AlwaysSprintState.Enabled and not Sprinting.IsSprinting then
+        local floor = StaminaThreshold > 0 and StaminaThreshold or (Sprinting.MinStamina or 0)
+        if (Sprinting.Stamina or 0) > floor + 10 then
+            startSprint()
+        end
+    end
+end))
 
 task.spawn(function()
     while Running do
@@ -335,14 +340,6 @@ task.spawn(function()
             elseif (not InvisState.Desired or not inRound) and InvisState.Active then
                 stopInvisibility()
             end
-
-            if StaminaThreshold > 0 and Sprinting.IsSprinting and (Sprinting.Stamina or 0) <= StaminaThreshold then
-                stopSprint()
-            end
-
-            if AlwaysSprintState.Enabled and not Sprinting.IsSprinting then
-                startSprint()
-            end
         end)
     end
 end)
@@ -353,6 +350,14 @@ function Player:SetSilentFootsteps(enabled)
     end
     FootstepsState.Enabled = enabled
     applyFootstepsMuted(LocalPlayer.Character)
+end
+
+function Player:SetStaminaManagement(threshold)
+    StaminaThreshold = threshold or 0
+
+    if StaminaThreshold > 0 and Sprinting.IsSprinting and (Sprinting.Stamina or 0) <= StaminaThreshold then
+        stopSprint()
+    end
 end
 
 function Player:Unload()
