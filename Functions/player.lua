@@ -1,0 +1,145 @@
+local Player = {}
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
+
+local Event = ReplicatedStorage.Modules.Network.Network.UnreliableRemoteEvent
+
+local RETURN_RADIUS = 100
+local STILL_TICKS = 3
+local TICK_RATE = 0.1
+
+local PARK_BYTES = { 10, 75, 0, 0, 0, 123, 34, 109, 34, 58, 110, 117, 108, 108, 44, 34, 116, 34, 58, 34, 98, 117, 102, 102, 101, 114, 34, 44, 34, 98, 97, 115, 101, 54, 52, 34, 58, 34, 65, 65, 65, 65, 65, 65, 65, 65, 101, 115, 81, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 80, 68, 89, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 34, 125 }
+
+local env = (typeof(getgenv) == "function" and getgenv()) or _G
+
+local State = env.__ForsakenParkState
+if not State then
+    State = { Enabled = false, Hooked = false }
+    env.__ForsakenParkState = State
+end
+
+State.Enabled = false
+
+if State.Connections then
+    for _, conn in ipairs(State.Connections) do
+        pcall(function()
+            conn:Disconnect()
+        end)
+    end
+end
+State.Connections = {}
+
+local parkBuffer = (function(bytes)
+    local b = buffer.create(#bytes)
+    for i = 1, #bytes do
+        buffer.writeu8(b, i - 1, bytes[i])
+    end
+    return b
+end)(PARK_BYTES)
+
+local function isParkPacket(buf)
+    if typeof(buf) ~= "buffer" or buffer.len(buf) ~= #PARK_BYTES then
+        return false
+    end
+    for i = 1, #PARK_BYTES do
+        if buffer.readu8(buf, i - 1) ~= PARK_BYTES[i] then
+            return false
+        end
+    end
+    return true
+end
+
+if not State.Hooked then
+    State.Hooked = true
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        if State.Enabled and self == Event and (method == "FireServer" or method == "fireServer") then
+            local args = { ... }
+            if args[1] == 1 and typeof(args[2]) == "table" and isParkPacket(args[2][1]) then
+                return oldNamecall(self, ...)
+            end
+            return
+        end
+        return oldNamecall(self, ...)
+    end)
+end
+
+local hitbox, stillTicks, lastPos = nil, 0, nil
+local Running = true
+
+local function grabHitbox(char)
+    task.spawn(function()
+        hitbox = char:WaitForChild("QueryHitbox", 10)
+    end)
+end
+
+if LocalPlayer.Character then
+    grabHitbox(LocalPlayer.Character)
+end
+
+table.insert(State.Connections, LocalPlayer.CharacterAdded:Connect(function(char)
+    hitbox, stillTicks, lastPos = nil, 0, nil
+    grabHitbox(char)
+end))
+
+task.spawn(function()
+    while Running do
+        task.wait(TICK_RATE)
+        if State.Enabled then
+            local ok = pcall(function()
+                local char = LocalPlayer.Character
+                if not char then
+                    return
+                end
+                if not hitbox or not hitbox.Parent then
+                    hitbox = char:FindFirstChild("QueryHitbox")
+                end
+                local hrp = char.PrimaryPart
+                if not (hitbox and hrp) then
+                    return
+                end
+                if (hitbox.Position - hrp.Position).Magnitude <= RETURN_RADIUS then
+                    local still = hrp.AssemblyLinearVelocity.Magnitude < 1
+                        and lastPos ~= nil
+                        and (hrp.Position - lastPos).Magnitude < 0.1
+                    lastPos = hrp.Position
+                    stillTicks = still and (stillTicks + 1) or 0
+                    if stillTicks >= STILL_TICKS then
+                        Event:FireServer(1, { parkBuffer })
+                        stillTicks, lastPos = 0, nil
+                    end
+                else
+                    stillTicks, lastPos = 0, nil
+                end
+            end)
+            if not ok then
+                hitbox = nil
+            end
+        end
+    end
+end)
+
+function Player:SetGodMode(enabled)
+    if State.Enabled == enabled then
+        return
+    end
+    State.Enabled = enabled
+    stillTicks, lastPos = 0, nil
+end
+
+function Player:Unload()
+    Running = false
+    State.Enabled = false
+    for _, conn in ipairs(State.Connections) do
+        pcall(function()
+            conn:Disconnect()
+        end)
+    end
+    table.clear(State.Connections)
+end
+
+return Player
