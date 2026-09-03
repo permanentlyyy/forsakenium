@@ -268,11 +268,14 @@ local AlwaysSprintState = {
     Enabled = false
 }
 
+local StaminaThreshold = 0
+
 local function startSprint()
     if not Sprinting.CanSprint or Sprinting.IsSprinting then
         return
     end
-    if (Sprinting.Stamina or 0) <= (Sprinting.MinStamina or 0) then
+    local floor = StaminaThreshold > 0 and StaminaThreshold or (Sprinting.MinStamina or 0)
+    if (Sprinting.Stamina or 0) <= floor then
         return
     end
     Sprinting.IsSprinting = true
@@ -310,6 +313,14 @@ function Player:SetAlwaysSprint(enabled)
     end
 end
 
+function Player:SetStaminaManagement(threshold)
+    StaminaThreshold = threshold or 0
+
+    if StaminaThreshold > 0 and Sprinting.IsSprinting and (Sprinting.Stamina or 0) <= StaminaThreshold then
+        stopSprint()
+    end
+end
+
 task.spawn(function()
     while Running do
         task.wait(0.25)
@@ -323,6 +334,10 @@ task.spawn(function()
                 end
             elseif (not InvisState.Desired or not inRound) and InvisState.Active then
                 stopInvisibility()
+            end
+
+            if StaminaThreshold > 0 and Sprinting.IsSprinting and (Sprinting.Stamina or 0) <= StaminaThreshold then
+                stopSprint()
             end
 
             if AlwaysSprintState.Enabled and not Sprinting.IsSprinting then

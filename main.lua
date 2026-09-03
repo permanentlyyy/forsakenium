@@ -79,6 +79,17 @@ StaminaSection:AddToggle("AlwaysSprint", {
     end
 })
 
+StaminaSection:AddSlider("StaminaManagement", {
+    Title = "Stamina Management",
+    Default = 0,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(value)
+        Player:SetStaminaManagement(value)
+    end
+})
+
 local CharacterSection = Tabs.Player:AddSection("Character")
 
 CharacterSection:AddToggle("GodMode", {
