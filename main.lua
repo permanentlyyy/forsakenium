@@ -88,7 +88,10 @@ CharacterSection:AddToggle("GodMode", {
 
 CharacterSection:AddToggle("Invisibility", {
     Title = "Invisibility",
-    Default = false
+    Default = false,
+    Callback = function(value)
+        Player:SetInvisibility(value)
+    end
 })
 
 CharacterSection:AddToggle("SilentFootsteps", {

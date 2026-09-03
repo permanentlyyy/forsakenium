@@ -84,6 +84,11 @@ end
 table.insert(State.Connections, LocalPlayer.CharacterAdded:Connect(function(char)
     hitbox, stillTicks, lastPos = nil, 0, nil
     grabHitbox(char)
+
+    task.wait(1)
+    if InvisState.Enabled and char.Parent then
+        setupInvisibility(char)
+    end
 end))
 
 task.spawn(function()
@@ -131,9 +136,92 @@ function Player:SetGodMode(enabled)
     stillTicks, lastPos = 0, nil
 end
 
+local INVIS_ANIMATION_ID = "rbxassetid://75804462760596"
+
+local InvisState = {
+    Enabled = false,
+    Track = nil,
+    Animation = nil,
+    Watchdog = nil
+}
+
+local function stopInvisibility()
+    if InvisState.Track then
+        pcall(function()
+            InvisState.Track:Stop()
+            if InvisState.Track.Destroy then
+                InvisState.Track:Destroy()
+            end
+        end)
+        InvisState.Track = nil
+    end
+
+    if InvisState.Animation then
+        pcall(function()
+            InvisState.Animation:Destroy()
+        end)
+        InvisState.Animation = nil
+    end
+
+    if InvisState.Watchdog then
+        InvisState.Watchdog:Disconnect()
+        InvisState.Watchdog = nil
+    end
+end
+
+local function setupInvisibility(character)
+    stopInvisibility()
+
+    local humanoid = character:WaitForChild("Humanoid", 10)
+    if not humanoid then
+        return
+    end
+
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if not animator then
+        animator = Instance.new("Animator")
+        animator.Parent = humanoid
+    end
+
+    local animation = Instance.new("Animation")
+    animation.AnimationId = INVIS_ANIMATION_ID
+    InvisState.Animation = animation
+
+    local track = animator:LoadAnimation(animation)
+    InvisState.Track = track
+    track.Looped = true
+    track.Priority = Enum.AnimationPriority.Action4
+    track:Play()
+    track:AdjustSpeed(0)
+
+    InvisState.Watchdog = game:GetService("RunService").Heartbeat:Connect(function()
+        if InvisState.Track and not InvisState.Track.IsPlaying then
+            InvisState.Track:Play()
+            InvisState.Track:AdjustSpeed(0)
+        end
+    end)
+end
+
+function Player:SetInvisibility(enabled)
+    if InvisState.Enabled == enabled then
+        return
+    end
+    InvisState.Enabled = enabled
+
+    if enabled then
+        local character = LocalPlayer.Character
+        if character then
+            setupInvisibility(character)
+        end
+    else
+        stopInvisibility()
+    end
+end
+
 function Player:Unload()
     Running = false
     State.Enabled = false
+    stopInvisibility()
     for _, conn in ipairs(State.Connections) do
         pcall(function()
             conn:Disconnect()
