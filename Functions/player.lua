@@ -130,6 +130,14 @@ function Player:SetGodMode(enabled)
     end
     State.Enabled = enabled
     stillTicks, lastPos = 0, nil
+
+    if enabled then
+        local char = LocalPlayer.Character
+        local hrp = char and char.PrimaryPart
+        if hrp and hrp.AssemblyLinearVelocity.Magnitude < 1 then
+            Event:FireServer(1, { parkBuffer })
+        end
+    end
 end
 
 local INVIS_ANIMATION_ID = "rbxassetid://75804462760596"
@@ -211,10 +219,28 @@ end
 
 local RoundActive = false
 
-table.insert(State.Connections, RoundRemote.OnClientEvent:Connect(function(connName, msg)
-    if connName ~= "HandleGamemode" then
+local function readGamemodeName(buf)
+    if buffer.readu8(buf, 0) ~= 3 then
+        return nil
+    end
+    local len = buffer.readu32(buf, 1)
+    if len == 0 or len > 64 or buffer.len(buf) < 5 + len then
+        return nil
+    end
+    return buffer.readstring(buf, 5, len)
+end
+
+table.insert(State.Connections, RoundRemote.OnClientEvent:Connect(function(connName, packed)
+    if connName ~= "HandleGamemode" or typeof(packed) ~= "table" then
         return
     end
+
+    local b = packed[1]
+    if typeof(b) ~= "buffer" or buffer.len(b) < 9 then
+        return
+    end
+
+    local msg = readGamemodeName(b)
     if msg == "Init" then
         RoundActive = true
     elseif msg == "Destroy" then
