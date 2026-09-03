@@ -222,10 +222,14 @@ function Player:SetInvisibility(enabled)
     end
 end
 
-local RoundNetwork = require(ReplicatedStorage.Systems.Player.Networks.RoundNetwork)
-
 local function isInRound()
-    return RoundNetwork.CurrentSession ~= nil
+    local char = LocalPlayer.Character
+    local parent = char and char.Parent
+    if not parent then
+        return false
+    end
+    local name = parent.Name
+    return name == "Survivors" or name == "Killers"
 end
 
 task.spawn(function()
