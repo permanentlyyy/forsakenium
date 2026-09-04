@@ -7,6 +7,7 @@ end
 --// Sources
 local Sources = {
     Player = "https://raw.githubusercontent.com/permanentlyyy/forsakenium/main/Functions/player.lua",
+    Generators = "https://raw.githubusercontent.com/permanentlyyy/forsakenium/main/Functions/generators.lua",
     Fluent = "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua",
     SaveManager = "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua",
     InterfaceManager = "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"
@@ -21,6 +22,7 @@ end
 
 --// Libraries
 local Player = load(Sources.Player)
+local Generators = load(Sources.Generators)
 local Fluent = load(Sources.Fluent)
 local SaveManager = load(Sources.SaveManager)
 local InterfaceManager = load(Sources.InterfaceManager)
@@ -117,12 +119,18 @@ local AutomationSection = Tabs.Generators:AddSection("Automation")
 
 AutomationSection:AddToggle("AutoSolve", {
     Title = "Auto Solve",
-    Default = false
+    Default = false,
+    Callback = function(value)
+        Generators:SetAutoSolve(value)
+    end
 })
 
 AutomationSection:AddToggle("RandomAutoSolveSpeed", {
     Title = "Random Auto Solve Speed",
-    Default = false
+    Default = false,
+    Callback = function(value)
+        Generators:SetRandomSolveSpeed(value)
+    end
 })
 
 AutomationSection:AddSlider("SolveSpeed", {
@@ -130,7 +138,10 @@ AutomationSection:AddSlider("SolveSpeed", {
     Default = 4.5,
     Min = 1.5,
     Max = 10,
-    Rounding = 1
+    Rounding = 1,
+    Callback = function(value)
+        Generators:SetSolveSpeed(value)
+    end
 })
 
 AutomationSection:AddSlider("RandomSolveMax", {
@@ -138,7 +149,10 @@ AutomationSection:AddSlider("RandomSolveMax", {
     Default = 10,
     Min = 1,
     Max = 10,
-    Rounding = 1
+    Rounding = 1,
+    Callback = function(value)
+        Generators:SetRandomSolveMax(value)
+    end
 })
 
 AutomationSection:AddSlider("RandomSolveMin", {
@@ -146,7 +160,10 @@ AutomationSection:AddSlider("RandomSolveMin", {
     Default = 1.5,
     Min = 1,
     Max = 10,
-    Rounding = 1
+    Rounding = 1,
+    Callback = function(value)
+        Generators:SetRandomSolveMin(value)
+    end
 })
 
 local GridSection = Tabs.Generators:AddSection("Grid")
