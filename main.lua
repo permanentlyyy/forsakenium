@@ -413,6 +413,7 @@ Window:SelectTab(1)
 --// Unload Handler
 _G.__Forsakenium = function()
     Player:Unload()
+    Generators:Unload()
     Fluent:Destroy()
 end
 

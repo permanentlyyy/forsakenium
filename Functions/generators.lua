@@ -208,4 +208,17 @@ function Generators:SetRandomSolveMin(value)
     State.RandomMin = value
 end
 
+function Generators:Unload()
+    running = false
+    State.Enabled = false
+    session.token += 1
+
+    for _, conn in ipairs(connections) do
+        pcall(function()
+            conn:Disconnect()
+        end)
+    end
+    table.clear(connections)
+end
+
 return Generators
