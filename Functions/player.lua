@@ -9,10 +9,6 @@ local LocalPlayer = Players.LocalPlayer
 local Event = ReplicatedStorage.Modules.Network.Network.UnreliableRemoteEvent
 local Network = require(ReplicatedStorage.Modules.Network.Network)
 
-local RETURN_RADIUS = 100
-local STILL_TICKS = 3
-local TICK_RATE = 0.1
-
 local PARK_BYTES = { 10, 75, 0, 0, 0, 123, 34, 109, 34, 58, 110, 117, 108, 108, 44, 34, 116, 34, 58, 34, 98, 117, 102, 102, 101, 114, 34, 44, 34, 98, 97, 115, 101, 54, 52, 34, 58, 34, 65, 65, 65, 65, 65, 65, 65, 65, 101, 115, 81, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 80, 68, 89, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 34, 125 }
 
 local env = (typeof(getgenv) == "function" and getgenv()) or _G
@@ -42,6 +38,12 @@ local parkBuffer = (function(bytes)
     return b
 end)(PARK_BYTES)
 
+local function fireParkPacket()
+    pcall(function()
+        Event:FireServer(1, { parkBuffer })
+    end)
+end
+
 local function isParkPacket(buf)
     if typeof(buf) ~= "buffer" or buffer.len(buf) ~= #PARK_BYTES then
         return false
@@ -70,8 +72,6 @@ if not State.Hooked then
     end)
 end
 
-local hitbox, stillTicks, lastPos = nil, 0, nil
-local parked = false
 local Running = true
 
 local FootstepsState = {
@@ -89,73 +89,14 @@ local function applyFootstepsMuted(char)
     end
 end
 
-local function grabHitbox(char)
-    task.spawn(function()
-        hitbox = char:WaitForChild("QueryHitbox", 10)
-    end)
-end
-
-if LocalPlayer.Character then
-    grabHitbox(LocalPlayer.Character)
-end
-
-task.spawn(function()
-    while Running do
-        task.wait(TICK_RATE)
-        if State.Enabled then
-            local ok = pcall(function()
-                local char = LocalPlayer.Character
-                if not char then
-                    return
-                end
-                if not hitbox or not hitbox.Parent then
-                    hitbox = char:FindFirstChild("QueryHitbox")
-                end
-                local hrp = char.PrimaryPart
-                if not (hitbox and hrp) then
-                    return
-                end
-                if (hitbox.Position - hrp.Position).Magnitude <= RETURN_RADIUS then
-                    local still = hrp.AssemblyLinearVelocity.Magnitude < 1
-                        and lastPos ~= nil
-                        and (hrp.Position - lastPos).Magnitude < 0.1
-                    lastPos = hrp.Position
-                    stillTicks = still and (stillTicks + 1) or 0
-
-                    if hrp.AssemblyLinearVelocity.Magnitude >= 1 then
-                        parked = false
-                    end
-
-                    if stillTicks >= STILL_TICKS and not parked then
-                        Event:FireServer(1, { parkBuffer })
-                        parked = true
-                        stillTicks, lastPos = 0, nil
-                    end
-                else
-                    parked = false
-                    stillTicks, lastPos = 0, nil
-                end
-            end)
-            if not ok then
-                hitbox = nil
-            end
-        end
-    end
-end)
-
 function Player:SetGodMode(enabled)
     if State.Enabled == enabled then
         return
     end
     State.Enabled = enabled
-    stillTicks, lastPos = 0, nil
 
     if enabled then
-        local char = LocalPlayer.Character
-        local hrp = char and char.PrimaryPart
-        if hrp and hrp.AssemblyLinearVelocity.Magnitude < 1 then
-            Event:FireServer(1, { parkBuffer })
-        end
+        fireParkPacket()
     end
 end
 
@@ -482,15 +423,16 @@ table.insert(State.Connections, RunService.Heartbeat:Connect(function(dt)
 end))
 
 table.insert(State.Connections, LocalPlayer.CharacterAdded:Connect(function(char)
-    hitbox, stillTicks, lastPos = nil, 0, nil
-    parked = false
-    grabHitbox(char)
     task.delay(0.1, applyFootstepsMuted, char)
 
     virtual = virtualMax()
     virtualTimer = 0
     virtualPenalty = false
     virtualExhausted = false
+
+    if State.Enabled then
+        task.delay(1, fireParkPacket)
+    end
 end))
 
 task.spawn(function()
