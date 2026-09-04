@@ -18,10 +18,10 @@ local State = {
 
 local lastGame = nil
 
-local originalStartGame = getgenv.__ForsakenGenStartOriginal
+local originalStartGame = getgenv().__ForsakenGenStartOriginal
 if not originalStartGame then
     originalStartGame = FlowGameManager.startGame
-    getgenv.__ForsakenGenStartOriginal = originalStartGame
+    getgenv().__ForsakenGenStartOriginal = originalStartGame
 end
 
 FlowGameManager.startGame = function(self, size, ...)
@@ -91,7 +91,7 @@ function Generators:Unload()
     running = false
     State.Enabled = false
     State.GridOverride = false
-    FlowGameManager.startGame = getgenv.__ForsakenGenStartOriginal
+    FlowGameManager.startGame = getgenv().__ForsakenGenStartOriginal
 
     for _, conn in ipairs(connections) do
         pcall(function()
