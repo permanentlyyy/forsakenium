@@ -8,118 +8,105 @@ local connections = {}
 
 local State = {
     Enabled = false,
-    Speed = 4.5,
+    Speed = 0.03,
     Random = false,
-    RandomMax = 10,
-    RandomMin = 1.5,
+    RandomMax = 0.1,
+    RandomMin = 0.02,
 }
 
 local lastGame = nil
 local session = { token = 0 }
 
-local DIRS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
+local NEIGHBOURS = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } }
 
-local function shuffledDirs()
-    local dirs = table.clone(DIRS)
-    for i = #dirs, 2, -1 do
-        local j = math.random(i)
-        dirs[i], dirs[j] = dirs[j], dirs[i]
-    end
-    return dirs
+local function cellKey(cell)
+    return cell.row .. "-" .. cell.col
 end
 
-local function solvePuzzle(gridSize, targetPairs)
-    local targetAt = {}
-    for i, pair in ipairs(targetPairs) do
-        for _, pt in ipairs(pair) do
-            targetAt[pt.row] = targetAt[pt.row] or {}
-            targetAt[pt.row][pt.col] = i
-        end
-    end
-
-    local solutions = {}
-
-    local function isFree(r, c, pairIndex)
-        if r < 1 or r > gridSize or c < 1 or c > gridSize then
-            return false
-        end
-        local owner = targetAt[r] and targetAt[r][c]
-        if owner and owner ~= pairIndex then
-            return false
-        end
-        for _, path in ipairs(solutions) do
-            for _, cell in ipairs(path) do
-                if cell.row == r and cell.col == c then
-                    return false
-                end
-            end
-        end
+local function isNeighbour(r1, c1, r2, c2)
+    if r2 == r1 - 1 and c2 == c1 then
         return true
     end
+    if r2 == r1 + 1 and c2 == c1 then
+        return true
+    end
+    if r2 == r1 and c2 == c1 - 1 then
+        return true
+    end
+    if r2 == r1 and c2 == c1 + 1 then
+        return true
+    end
+    return false
+end
 
-    local function enumeratePaths(pairIndex, start, goal, maxCount, maxLen, budget)
-        local results = {}
-        local visited = {}
-        local path = { { row = start.row, col = start.col } }
+local function orderSolution(cells, endpoints)
+    if not cells or #cells == 0 then
+        return nil
+    end
 
-        local function dfs(r, c)
-            if #results >= maxCount or budget.left <= 0 then
-                return
-            end
-            budget.left -= 1
-            if r == goal.row and c == goal.col then
-                table.insert(results, table.clone(path))
-                return
-            end
-            if #path >= maxLen then
-                return
-            end
-            visited[r] = visited[r] or {}
-            visited[r][c] = true
-            for _, d in ipairs(shuffledDirs()) do
-                if #results >= maxCount or budget.left <= 0 then
-                    break
+    local lookup = {}
+    for _, cell in ipairs(cells) do
+        lookup[cellKey(cell)] = { row = cell.row, col = cell.col }
+    end
+
+    local start
+    for _, ep in ipairs(endpoints or {}) do
+        if lookup[cellKey(ep)] then
+            start = { row = ep.row, col = ep.col }
+            break
+        end
+    end
+
+    if not start then
+        for _, cell in pairs(lookup) do
+            local count = 0
+            for _, d in ipairs(NEIGHBOURS) do
+                if lookup[(cell.row + d[1]) .. "-" .. (cell.col + d[2])] then
+                    count += 1
                 end
-                local nr, nc = r + d[1], c + d[2]
-                if not (visited[nr] and visited[nr][nc]) and isFree(nr, nc, pairIndex) then
-                    table.insert(path, { row = nr, col = nc })
-                    dfs(nr, nc)
-                    table.remove(path)
-                end
             end
-            visited[r][c] = nil
-        end
-
-        dfs(start.row, start.col)
-        table.sort(results, function(a, b)
-            return #a < #b
-        end)
-        return results
-    end
-
-    local function assign(pairIndex, budget)
-        if pairIndex > #targetPairs then
-            return true
-        end
-        local pair = targetPairs[pairIndex]
-        local candidates = enumeratePaths(pairIndex, pair[1], pair[2], 6, gridSize * 2 + 2, budget)
-        for _, path in ipairs(candidates) do
-            table.insert(solutions, path)
-            if assign(pairIndex + 1, budget) then
-                return true
-            end
-            table.remove(solutions)
-            if budget.left <= 0 then
-                return false
+            if count == 1 then
+                start = { row = cell.row, col = cell.col }
+                break
             end
         end
-        return false
     end
 
-    if assign(1, { left = 60000 }) then
-        return solutions
+    if not start then
+        start = { row = cells[1].row, col = cells[1].col }
     end
-    return nil
+
+    local pool = table.clone(lookup)
+    local ordered = { start }
+    pool[cellKey(start)] = nil
+    local cur = start
+
+    while next(pool) do
+        local moved = false
+        for k, cell in pairs(pool) do
+            if isNeighbour(cur.row, cur.col, cell.row, cell.col) then
+                table.insert(ordered, { row = cell.row, col = cell.col })
+                pool[k] = nil
+                cur = cell
+                moved = true
+                break
+            end
+        end
+        if not moved then
+            break
+        end
+    end
+
+    return ordered
+end
+
+local function nextDelay()
+    if not State.Random then
+        return State.Speed
+    end
+    local min = math.min(State.RandomMin, State.RandomMax)
+    local max = math.max(State.RandomMin, State.RandomMax)
+    return min + (max - min) * math.random()
 end
 
 local function drawSolutions(activeGame, solutions, token)
@@ -142,11 +129,11 @@ local function drawSolutions(activeGame, solutions, token)
                 return
             end
             activeGame:__stepToCell(path[s].row, path[s].col)
-            task.wait(0.045 + math.random() * 0.045)
+            task.wait(nextDelay())
         end
 
         activeGame:DragEnd()
-        task.wait(0.12 + math.random() * 0.1)
+        task.wait(0)
     end
 end
 
@@ -157,19 +144,12 @@ table.insert(connections, RunService.Heartbeat:Connect(function()
     end
 
     local activeGame = FlowGameManager.activeGame
-    if activeGame and activeGame ~= lastGame and not activeGame.gameEnded then
+    if activeGame and activeGame ~= lastGame and not activeGame.gameEnded and activeGame.Solution then
         lastGame = activeGame
         session.token += 1
         local token = session.token
 
-        local delay = State.Speed
-        if State.Random then
-            local min = math.min(State.RandomMin, State.RandomMax)
-            local max = math.max(State.RandomMin, State.RandomMax)
-            delay = min + (max - min) * math.random()
-        end
-
-        task.delay(delay, function()
+        task.delay(0.3, function()
             if not running or not State.Enabled or session.token ~= token then
                 return
             end
@@ -177,10 +157,16 @@ table.insert(connections, RunService.Heartbeat:Connect(function()
                 return
             end
 
-            local ok, solutions = pcall(solvePuzzle, activeGame.gridSize, activeGame.targetPairs)
-            if ok and solutions then
-                pcall(drawSolutions, activeGame, solutions, token)
+            local solutions = {}
+            for ci, cells in ipairs(activeGame.Solution) do
+                local ordered = orderSolution(cells, activeGame.targetPairs[ci])
+                if not ordered or #ordered == 0 then
+                    return
+                end
+                solutions[ci] = ordered
             end
+
+            pcall(drawSolutions, activeGame, solutions, token)
         end)
     end
 end))
