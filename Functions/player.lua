@@ -3,122 +3,14 @@ local Player = {}
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 
-local Event = ReplicatedStorage.Modules.Network.Network.UnreliableRemoteEvent
 local Network = require(ReplicatedStorage.Modules.Network.Network)
 local Sprinting = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
 
-local RETURN_RADIUS = 100
-local STILL_TICKS = 3
-local TICK_RATE = 0.1
-
-local env = (typeof(getgenv) == "function" and getgenv()) or _G
-
-local State = env.__ForsakenParkState
-if not State then
-    State = { Enabled = false, Hooked = false }
-    env.__ForsakenParkState = State
-end
-
-State.Enabled = false
-
-if State.Connections then
-    for _, conn in ipairs(State.Connections) do
-        pcall(function()
-            conn:Disconnect()
-        end)
-    end
-end
-State.Connections = {}
-
-local function createUndergroundBuffer()
-    local b = buffer.create(30)
-    buffer.writef32(b, 0, 0)
-    buffer.writef32(b, 4, -1000)
-    buffer.writef32(b, 8, 0)
-    buffer.writei16(b, 12, 0)
-    buffer.writei16(b, 14, 0)
-    buffer.writei16(b, 16, 0)
-    buffer.writef32(b, 18, 0)
-    buffer.writef32(b, 22, 0)
-    buffer.writef32(b, 26, 0)
-    return b
-end
-
-local RawParkBuffer = createUndergroundBuffer()
-
-local function isUndergroundBuffer(buf)
-    if typeof(buf) ~= "buffer" or buffer.len(buf) < 30 then
-        return false
-    end
-    return buffer.readf32(buf, 0) == 0
-        and buffer.readf32(buf, 4) == -1000
-        and buffer.readf32(buf, 8) == 0
-end
-
-local function wireValueIsUnderground(value)
-    if typeof(value) ~= "buffer" then
-        return false
-    end
-    if isUndergroundBuffer(value) then
-        return true
-    end
-
-    local ok, result = pcall(function()
-        local json = buffer.readstring(value, 0, buffer.len(value))
-        local data = HttpService:JSONDecode(json)
-        if data and data.t == "buffer" and data.base64 then
-            return buffer.frombase64(data.base64)
-        end
-        return nil
-    end)
-
-    if not ok or not result then
-        return false
-    end
-
-    return isUndergroundBuffer(result)
-end
-
-local function fireParkPacket()
-    pcall(function()
-        Network:FireServerConnection("UpdateCharacterPosition", "UREMOTE_EVENT", RawParkBuffer)
-    end)
-end
-
-if not State.Hooked then
-    State.Hooked = true
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        if State.Enabled and self == Event and (method == "FireServer" or method == "fireServer") then
-            local args = { ... }
-            if args[1] == 1 and typeof(args[2]) == "table" then
-                local valid = false
-                for _, v in pairs(args[2]) do
-                    if wireValueIsUnderground(v) then
-                        valid = true
-                    else
-                        valid = false
-                        break
-                    end
-                end
-                if valid then
-                    return oldNamecall(self, ...)
-                end
-            end
-            return
-        end
-        return oldNamecall(self, ...)
-    end)
-end
-
-local stillTicks, lastPos = 0, nil
-local parked = false
 local Running = true
+local Connections = {}
 
 local FootstepsState = {
     Enabled = false
@@ -132,52 +24,6 @@ local function applyFootstepsMuted(char)
         char:SetAttribute("FootstepsMuted", true)
     else
         char:SetAttribute("FootstepsMuted", nil)
-    end
-end
-
-task.spawn(function()
-    while Running do
-        task.wait(TICK_RATE)
-        if State.Enabled then
-            pcall(function()
-                local char = LocalPlayer.Character
-                if not char then
-                    return
-                end
-                local hrp = char.PrimaryPart
-                if not hrp then
-                    return
-                end
-                if hrp.AssemblyLinearVelocity.Magnitude >= 1 then
-                    parked = false
-                end
-
-                local still = hrp.AssemblyLinearVelocity.Magnitude < 1
-                    and lastPos ~= nil
-                    and (hrp.Position - lastPos).Magnitude < 0.1
-                lastPos = hrp.Position
-                stillTicks = still and (stillTicks + 1) or 0
-
-                if stillTicks >= STILL_TICKS and not parked then
-                    fireParkPacket()
-                    parked = true
-                    stillTicks, lastPos = 0, nil
-                end
-            end)
-        end
-    end
-end)
-
-function Player:SetGodMode(enabled)
-    if State.Enabled == enabled then
-        return
-    end
-    State.Enabled = enabled
-
-    if enabled then
-        stillTicks, lastPos = 0, nil
-        parked = false
-        task.delay(0.25, fireParkPacket)
     end
 end
 
@@ -361,13 +207,15 @@ local function virtualMin()
     return Sprinting.MinStamina or 0
 end
 
-local originalGrantStamina = env.__ForsakenGrantOriginal
-if not originalGrantStamina then
-    originalGrantStamina = function(amount)
-        Sprinting.Stamina = math.min((Sprinting.Stamina or 0) + amount, Sprinting.MaxStamina)
+local originalGrantStamina = (function()
+    local env = (typeof(getgenv) == "function" and getgenv()) or _G
+    if not env.__ForsakenGrantOriginal then
+        env.__ForsakenGrantOriginal = function(amount)
+            Sprinting.Stamina = math.min((Sprinting.Stamina or 0) + amount, Sprinting.MaxStamina)
+        end
     end
-    env.__ForsakenGrantOriginal = originalGrantStamina
-end
+    return env.__ForsakenGrantOriginal
+end)()
 
 local wrappedGrantStamina = function(amount)
     originalGrantStamina(amount)
@@ -435,7 +283,7 @@ function Player:SetSilentFootsteps(enabled)
     applyFootstepsMuted(LocalPlayer.Character)
 end
 
-table.insert(State.Connections, RunService.Heartbeat:Connect(function(dt)
+table.insert(Connections, RunService.Heartbeat:Connect(function(dt)
     if StaminaThreshold > 0 and Sprinting.IsSprinting and (Sprinting.Stamina or 0) <= StaminaThreshold then
         stopSprint()
     end
@@ -564,24 +412,13 @@ table.insert(State.Connections, RunService.Heartbeat:Connect(function(dt)
     end
 end))
 
-table.insert(State.Connections, LocalPlayer.CharacterAdded:Connect(function(char)
+table.insert(Connections, LocalPlayer.CharacterAdded:Connect(function(char)
     task.delay(0.1, applyFootstepsMuted, char)
 
     virtual = virtualMax()
     virtualTimer = 0
     virtualPenalty = false
     virtualExhausted = false
-
-    if State.Enabled then
-        parked = false
-        stillTicks, lastPos = 0, nil
-        task.delay(1, function()
-            if State.Enabled then
-                fireParkPacket()
-                parked = true
-            end
-        end)
-    end
 end))
 
 task.spawn(function()
@@ -604,7 +441,6 @@ end)
 
 function Player:Unload()
     Running = false
-    State.Enabled = false
     InfStaminaState.Enabled = false
     FootstepsState.Enabled = false
     stopInvisibility()
@@ -619,13 +455,6 @@ function Player:Unload()
     pcall(function()
         Network.SetConnection("GrantStamina", "REMOTE_EVENT", originalGrantStamina)
     end)
-
-    for _, conn in ipairs(State.Connections) do
-        pcall(function()
-            conn:Disconnect()
-        end)
-    end
-    table.clear(State.Connections)
 end
 
 return Player
