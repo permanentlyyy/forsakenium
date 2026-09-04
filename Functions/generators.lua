@@ -12,9 +12,24 @@ local State = {
     Random = false,
     RandomMax = 10,
     RandomMin = 1.5,
+    GridOverride = false,
+    GridSize = 7,
 }
 
 local lastGame = nil
+
+local originalStartGame = getgenv.__ForsakenGenStartOriginal
+if not originalStartGame then
+    originalStartGame = FlowGameManager.startGame
+    getgenv.__ForsakenGenStartOriginal = originalStartGame
+end
+
+FlowGameManager.startGame = function(self, size, ...)
+    if State.GridOverride then
+        size = State.GridSize
+    end
+    return originalStartGame(self, size, ...)
+end
 
 table.insert(connections, RunService.Heartbeat:Connect(function()
     if not State.Enabled then
@@ -64,9 +79,19 @@ function Generators:SetRandomSolveMin(value)
     State.RandomMin = value
 end
 
+function Generators:SetGridSizeOverride(enabled)
+    State.GridOverride = enabled
+end
+
+function Generators:SetGridSize(value)
+    State.GridSize = value
+end
+
 function Generators:Unload()
     running = false
     State.Enabled = false
+    State.GridOverride = false
+    FlowGameManager.startGame = getgenv.__ForsakenGenStartOriginal
 
     for _, conn in ipairs(connections) do
         pcall(function()

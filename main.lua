@@ -170,7 +170,10 @@ local GridSection = Tabs.Generators:AddSection("Grid")
 
 GridSection:AddToggle("GridSize", {
     Title = "Grid Size",
-    Default = false
+    Default = false,
+    Callback = function(value)
+        Generators:SetGridSizeOverride(value)
+    end
 })
 
 GridSection:AddSlider("Size", {
@@ -178,7 +181,10 @@ GridSection:AddSlider("Size", {
     Default = 7,
     Min = 2,
     Max = 30,
-    Rounding = 0
+    Rounding = 0,
+    Callback = function(value)
+        Generators:SetGridSize(value)
+    end
 })
 
 local PuzzleSection = Tabs.Generators:AddSection("Puzzle")
