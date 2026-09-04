@@ -220,14 +220,11 @@ local AlwaysSprintState = {
     Enabled = false
 }
 
-local StaminaThreshold = 0
-
 local function startSprint()
     if not Sprinting.CanSprint or Sprinting.IsSprinting then
         return
     end
-    local floor = StaminaThreshold > 0 and StaminaThreshold or (Sprinting.MinStamina or 0)
-    if (Sprinting.Stamina or 0) <= floor then
+    if (Sprinting.Stamina or 0) <= (Sprinting.MinStamina or 0) then
         return
     end
     Sprinting.IsSprinting = true
@@ -261,14 +258,6 @@ function Player:SetAlwaysSprint(enabled)
     if enabled then
         startSprint()
     else
-        stopSprint()
-    end
-end
-
-function Player:SetStaminaManagement(threshold)
-    StaminaThreshold = threshold or 0
-
-    if StaminaThreshold > 0 and Sprinting.IsSprinting and (Sprinting.Stamina or 0) <= StaminaThreshold then
         stopSprint()
     end
 end
@@ -444,12 +433,8 @@ table.insert(Connections, RunService.Heartbeat:Connect(function(dt)
         end)
     end
 
-    if StaminaThreshold > 0 and Sprinting.IsSprinting and (Sprinting.Stamina or 0) <= StaminaThreshold then
-        stopSprint()
-    end
-
     if AlwaysSprintState.Enabled and not Sprinting.IsSprinting then
-        local floor = StaminaThreshold > 0 and StaminaThreshold or (Sprinting.MinStamina or 0)
+        local floor = Sprinting.MinStamina or 0
         if (Sprinting.Stamina or 0) > floor then
             startSprint()
         end
