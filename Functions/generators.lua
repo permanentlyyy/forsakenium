@@ -124,23 +124,10 @@ local function isColorSolved(activeGame, colorIndex)
     return (sameCell(first, a) and sameCell(last, b)) or (sameCell(first, b) and sameCell(last, a))
 end
 
-local function isLive(activeGame, token)
-    return running and State.Enabled and session.token == token
-        and not activeGame.gameEnded and FlowGameManager.activeGame == activeGame
-end
-
-local function drawColor(activeGame, colorIndex, ordered, token)
-    local t0 = os.clock()
-    while activeGame.isDrawing and os.clock() - t0 < 2 do
-        if not isLive(activeGame, token) then
-            return
-        end
-        task.wait(0.05)
-    end
-
+local function drawColor(activeGame, colorIndex, ordered, live)
     activeGame.paths[colorIndex] = {}
     for _, node in ipairs(ordered) do
-        if not isLive(activeGame, token) then
+        if not live() then
             return
         end
         table.insert(activeGame.paths[colorIndex], { row = node.row, col = node.col })
@@ -162,7 +149,20 @@ table.insert(connections, RunService.Heartbeat:Connect(function()
         local token = session.token
 
         task.delay(0.3, function()
-            if not isLive(activeGame, token) then
+            local injected = false
+
+            local function live()
+                return running and State.Enabled and session.token == token
+                    and FlowGameManager.activeGame == activeGame
+                    and (not activeGame.gameEnded or injected)
+            end
+
+            if not live() then
+                return
+            end
+
+            if activeGame:checkWin() then
+                activeGame:checkForWin()
                 return
             end
 
@@ -175,33 +175,44 @@ table.insert(connections, RunService.Heartbeat:Connect(function()
                 orderedColors[ci] = ordered
             end
 
+            activeGame.isDrawing = false
+            activeGame.gameEnded = true
+            injected = true
+
+            local won = false
             for _ = 1, 5 do
-                if not isLive(activeGame, token) then
-                    return
+                if not live() then
+                    break
                 end
 
                 local pending = 0
                 for ci, ordered in ipairs(orderedColors) do
                     if not isColorSolved(activeGame, ci) then
                         pending += 1
-                        drawColor(activeGame, ci, ordered, token)
+                        drawColor(activeGame, ci, ordered, live)
                     end
                 end
 
-                if not isLive(activeGame, token) then
-                    return
+                if not live() then
+                    break
                 end
 
                 if activeGame:checkWin() then
                     activeGame:checkForWin()
-                    return
+                    won = true
+                    break
                 end
 
                 if pending == 0 then
-                    return
+                    break
                 end
 
                 task.wait(0.25)
+            end
+
+            if not won and FlowGameManager.activeGame == activeGame and activeGame.completedEvent ~= nil then
+                activeGame.gameEnded = false
+                activeGame:updateGui()
             end
         end)
     end
