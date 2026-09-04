@@ -109,31 +109,43 @@ local function nextDelay()
     return min + (max - min) * math.random()
 end
 
-local function drawSolutions(activeGame, solutions, token)
-    for i, path in ipairs(solutions) do
-        if not running or not State.Enabled or session.token ~= token then
+local function sameCell(a, b)
+    return a.row == b.row and a.col == b.col
+end
+
+local function isColorSolved(activeGame, colorIndex)
+    local path = activeGame.paths[colorIndex]
+    local pair = activeGame.targetPairs[colorIndex]
+    if not path or #path < 2 then
+        return false
+    end
+    local first, last = path[1], path[#path]
+    local a, b = pair[1], pair[2]
+    return (sameCell(first, a) and sameCell(last, b)) or (sameCell(first, b) and sameCell(last, a))
+end
+
+local function isLive(activeGame, token)
+    return running and State.Enabled and session.token == token
+        and not activeGame.gameEnded and FlowGameManager.activeGame == activeGame
+end
+
+local function drawColor(activeGame, colorIndex, ordered, token)
+    local t0 = os.clock()
+    while activeGame.isDrawing and os.clock() - t0 < 2 do
+        if not isLive(activeGame, token) then
             return
         end
-        if activeGame.gameEnded or FlowGameManager.activeGame ~= activeGame then
+        task.wait(0.05)
+    end
+
+    activeGame.paths[colorIndex] = {}
+    for _, node in ipairs(ordered) do
+        if not isLive(activeGame, token) then
             return
         end
-
-        local start = path[1]
-        activeGame:DragBegin(start.row, start.col)
-
-        for s = 2, #path do
-            if not running or not State.Enabled or session.token ~= token then
-                return
-            end
-            if activeGame.gameEnded or FlowGameManager.activeGame ~= activeGame then
-                return
-            end
-            activeGame:__stepToCell(path[s].row, path[s].col)
-            task.wait(nextDelay())
-        end
-
-        activeGame:DragEnd()
-        task.wait(0)
+        table.insert(activeGame.paths[colorIndex], { row = node.row, col = node.col })
+        activeGame:updateGui()
+        task.wait(nextDelay())
     end
 end
 
@@ -150,23 +162,47 @@ table.insert(connections, RunService.Heartbeat:Connect(function()
         local token = session.token
 
         task.delay(0.3, function()
-            if not running or not State.Enabled or session.token ~= token then
-                return
-            end
-            if FlowGameManager.activeGame ~= activeGame or activeGame.gameEnded then
+            if not isLive(activeGame, token) then
                 return
             end
 
-            local solutions = {}
+            local orderedColors = {}
             for ci, cells in ipairs(activeGame.Solution) do
                 local ordered = orderSolution(cells, activeGame.targetPairs[ci])
                 if not ordered or #ordered == 0 then
                     return
                 end
-                solutions[ci] = ordered
+                orderedColors[ci] = ordered
             end
 
-            pcall(drawSolutions, activeGame, solutions, token)
+            for _ = 1, 5 do
+                if not isLive(activeGame, token) then
+                    return
+                end
+
+                local pending = 0
+                for ci, ordered in ipairs(orderedColors) do
+                    if not isColorSolved(activeGame, ci) then
+                        pending += 1
+                        drawColor(activeGame, ci, ordered, token)
+                    end
+                end
+
+                if not isLive(activeGame, token) then
+                    return
+                end
+
+                if activeGame:checkWin() then
+                    activeGame:checkForWin()
+                    return
+                end
+
+                if pending == 0 then
+                    return
+                end
+
+                task.wait(0.25)
+            end
         end)
     end
 end))
