@@ -100,10 +100,7 @@ local CharacterSection = Tabs.Player:AddSection("Character")
 
 CharacterSection:AddToggle("GodMode", {
     Title = "God Mode",
-    Default = false,
-    Callback = function(value)
-        Player:SetGodMode(value)
-    end
+    Default = false
 })
 
 CharacterSection:AddToggle("Invisibility", {
