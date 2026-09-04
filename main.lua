@@ -191,7 +191,10 @@ local PuzzleSection = Tabs.Generators:AddSection("Puzzle")
 
 PuzzleSection:AddToggle("ShowCorrectPuzzlePath", {
     Title = "Show Correct Puzzle Path",
-    Default = false
+    Default = false,
+    Callback = function(value)
+        Generators:SetShowPuzzlePath(value)
+    end
 })
 
 PuzzleSection:AddSlider("PuzzlePathTransparency", {
@@ -199,7 +202,10 @@ PuzzleSection:AddSlider("PuzzlePathTransparency", {
     Default = 50,
     Min = 0,
     Max = 100,
-    Rounding = 0
+    Rounding = 0,
+    Callback = function(value)
+        Generators:SetPuzzlePathTransparency(value)
+    end
 })
 
 
