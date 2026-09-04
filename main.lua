@@ -63,12 +63,18 @@ local StaminaSection = Tabs.Player:AddSection("Stamina")
 
 StaminaSection:AddToggle("InfiniteStamina", {
     Title = "Infinite Stamina",
-    Default = false
+    Default = false,
+    Callback = function(value)
+        Player:SetInfiniteStamina(value)
+    end
 })
 
 StaminaSection:AddToggle("ShowLegitStaminaView", {
     Title = "Show Legit Stamina View",
-    Default = false
+    Default = false,
+    Callback = function(value)
+        Player:SetShowLegitStaminaView(value)
+    end
 })
 
 StaminaSection:AddToggle("AlwaysSprint", {
