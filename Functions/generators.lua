@@ -8,211 +8,35 @@ local connections = {}
 
 local State = {
     Enabled = false,
-    Speed = 0.03,
+    Speed = 4.5,
     Random = false,
-    RandomMax = 0.1,
-    RandomMin = 0.02,
+    RandomMax = 10,
+    RandomMin = 1.5,
 }
 
 local lastGame = nil
-local session = { token = 0 }
-
-local NEIGHBOURS = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } }
-
-local function cellKey(cell)
-    return cell.row .. "-" .. cell.col
-end
-
-local function isNeighbour(r1, c1, r2, c2)
-    if r2 == r1 - 1 and c2 == c1 then
-        return true
-    end
-    if r2 == r1 + 1 and c2 == c1 then
-        return true
-    end
-    if r2 == r1 and c2 == c1 - 1 then
-        return true
-    end
-    if r2 == r1 and c2 == c1 + 1 then
-        return true
-    end
-    return false
-end
-
-local function orderSolution(cells, endpoints)
-    if not cells or #cells == 0 then
-        return nil
-    end
-
-    local lookup = {}
-    for _, cell in ipairs(cells) do
-        lookup[cellKey(cell)] = { row = cell.row, col = cell.col }
-    end
-
-    local start
-    for _, ep in ipairs(endpoints or {}) do
-        if lookup[cellKey(ep)] then
-            start = { row = ep.row, col = ep.col }
-            break
-        end
-    end
-
-    if not start then
-        for _, cell in pairs(lookup) do
-            local count = 0
-            for _, d in ipairs(NEIGHBOURS) do
-                if lookup[(cell.row + d[1]) .. "-" .. (cell.col + d[2])] then
-                    count += 1
-                end
-            end
-            if count == 1 then
-                start = { row = cell.row, col = cell.col }
-                break
-            end
-        end
-    end
-
-    if not start then
-        start = { row = cells[1].row, col = cells[1].col }
-    end
-
-    local pool = table.clone(lookup)
-    local ordered = { start }
-    pool[cellKey(start)] = nil
-    local cur = start
-
-    while next(pool) do
-        local moved = false
-        for k, cell in pairs(pool) do
-            if isNeighbour(cur.row, cur.col, cell.row, cell.col) then
-                table.insert(ordered, { row = cell.row, col = cell.col })
-                pool[k] = nil
-                cur = cell
-                moved = true
-                break
-            end
-        end
-        if not moved then
-            break
-        end
-    end
-
-    return ordered
-end
-
-local function nextDelay()
-    if not State.Random then
-        return State.Speed
-    end
-    local min = math.min(State.RandomMin, State.RandomMax)
-    local max = math.max(State.RandomMin, State.RandomMax)
-    return min + (max - min) * math.random()
-end
-
-local function sameCell(a, b)
-    return a.row == b.row and a.col == b.col
-end
-
-local function isColorSolved(activeGame, colorIndex)
-    local path = activeGame.paths[colorIndex]
-    local pair = activeGame.targetPairs[colorIndex]
-    if not path or #path < 2 then
-        return false
-    end
-    local first, last = path[1], path[#path]
-    local a, b = pair[1], pair[2]
-    return (sameCell(first, a) and sameCell(last, b)) or (sameCell(first, b) and sameCell(last, a))
-end
-
-local function drawColor(activeGame, colorIndex, ordered, live)
-    activeGame.paths[colorIndex] = {}
-    for _, node in ipairs(ordered) do
-        if not live() then
-            return
-        end
-        table.insert(activeGame.paths[colorIndex], { row = node.row, col = node.col })
-        activeGame:updateGui()
-        task.wait(nextDelay())
-    end
-end
 
 table.insert(connections, RunService.Heartbeat:Connect(function()
     if not State.Enabled then
-        lastGame = nil
         return
     end
 
     local activeGame = FlowGameManager.activeGame
-    if activeGame and activeGame ~= lastGame and not activeGame.gameEnded and activeGame.Solution then
+    if activeGame and activeGame ~= lastGame and not activeGame.gameEnded then
         lastGame = activeGame
-        session.token += 1
-        local token = session.token
 
-        task.delay(0.3, function()
-            local injected = false
+        local delay = State.Speed
+        if State.Random then
+            local min = math.min(State.RandomMin, State.RandomMax)
+            local max = math.max(State.RandomMin, State.RandomMax)
+            delay = min + (max - min) * math.random()
+        end
 
-            local function live()
-                return running and State.Enabled and session.token == token
-                    and FlowGameManager.activeGame == activeGame
-                    and (not activeGame.gameEnded or injected)
-            end
-
-            if not live() then
-                return
-            end
-
-            if activeGame:checkWin() then
-                activeGame:checkForWin()
-                return
-            end
-
-            local orderedColors = {}
-            for ci, cells in ipairs(activeGame.Solution) do
-                local ordered = orderSolution(cells, activeGame.targetPairs[ci])
-                if not ordered or #ordered == 0 then
-                    return
-                end
-                orderedColors[ci] = ordered
-            end
-
-            activeGame.isDrawing = false
-            activeGame.gameEnded = true
-            injected = true
-
-            local won = false
-            for _ = 1, 5 do
-                if not live() then
-                    break
-                end
-
-                local pending = 0
-                for ci, ordered in ipairs(orderedColors) do
-                    if not isColorSolved(activeGame, ci) then
-                        pending += 1
-                        drawColor(activeGame, ci, ordered, live)
-                    end
-                end
-
-                if not live() then
-                    break
-                end
-
-                if activeGame:checkWin() then
-                    activeGame:checkForWin()
-                    won = true
-                    break
-                end
-
-                if pending == 0 then
-                    break
-                end
-
-                task.wait(0.25)
-            end
-
-            if not won and FlowGameManager.activeGame == activeGame and activeGame.completedEvent ~= nil then
-                activeGame.gameEnded = false
-                activeGame:updateGui()
+        task.delay(delay, function()
+            if running and State.Enabled and FlowGameManager.activeGame == activeGame and not activeGame.gameEnded then
+                pcall(function()
+                    activeGame:EndGame(true)
+                end)
             end
         end)
     end
@@ -222,7 +46,6 @@ local Generators = {}
 
 function Generators:SetAutoSolve(enabled)
     State.Enabled = enabled
-    session.token += 1
 end
 
 function Generators:SetSolveSpeed(value)
@@ -244,7 +67,6 @@ end
 function Generators:Unload()
     running = false
     State.Enabled = false
-    session.token += 1
 
     for _, conn in ipairs(connections) do
         pcall(function()
