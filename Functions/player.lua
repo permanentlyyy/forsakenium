@@ -7,10 +7,92 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
 local Network = require(ReplicatedStorage.Modules.Network.Network)
+local CharRep = require(ReplicatedStorage.Systems.Player.Game.CharacterReplication)
 local Sprinting = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
+
+local env = (typeof(getgenv) == "function" and getgenv()) or _G
 
 local Running = true
 local Connections = {}
+
+local GodState = env.__ForsakenGodState
+if not GodState then
+    GodState = { Enabled = false }
+    env.__ForsakenGodState = GodState
+end
+GodState.Enabled = false
+
+local GOD = {
+    fakeY = -1000,
+    interval = 0.1,
+    stillTime = 0.06,
+    velThreshold = 0.35,
+    stopCooldown = 0.5,
+    tpPause = 1,
+    dropShield = 40,
+    refreshDist = 12,
+    maxDist = 250
+}
+
+local originalFire = (function()
+    if not env.__ForsakenOriginalFire then
+        env.__ForsakenOriginalFire = Network.FireServerConnection
+    end
+    return env.__ForsakenOriginalFire
+end)()
+
+local godAcc, godStillFor, godMotionCooldown = 0, 0, 0
+local godLastPos, godLastSafe, godLastChar = nil, nil, nil
+local godExternalUntil, godHoldUntil = 0, 0
+
+if not env.__ForsakenGodHooked then
+    env.__ForsakenGodHooked = true
+    Network.FireServerConnection = function(self, name, typ, ...)
+        if GodState.Enabled and name == "UpdateCharacterPosition" then
+            return
+        end
+        return originalFire(self, name, typ, ...)
+    end
+end
+
+local function godGetParts()
+    local ch = LocalPlayer.Character
+    if not ch then
+        return nil
+    end
+    local hum = ch:FindFirstChildOfClass("Humanoid")
+    local root = ch.PrimaryPart or ch:FindFirstChild("HumanoidRootPart")
+    if not hum or not root or hum.Health <= 0 then
+        return nil
+    end
+    return ch, hum, root
+end
+
+local function godIsStill(hum, root)
+    if hum.FloorMaterial == Enum.Material.Air then
+        return false
+    end
+    if hum.MoveDirection.Magnitude > 0.01 then
+        return false
+    end
+    if root.AssemblyLinearVelocity.Magnitude > GOD.velThreshold then
+        return false
+    end
+    return true
+end
+
+local function godSendPacket(hum, root)
+    if not godIsStill(hum, root) then
+        return
+    end
+    pcall(function()
+        local buf = CharRep.Serialize(root.CFrame, root.AssemblyLinearVelocity)
+        if typeof(buf) == "buffer" and buffer.len(buf) >= 12 then
+            buffer.writef32(buf, 4, GOD.fakeY)
+        end
+        originalFire(Network, "UpdateCharacterPosition", "UREMOTE_EVENT", buf)
+    end)
+end
 
 local FootstepsState = {
     Enabled = false
@@ -208,7 +290,6 @@ local function virtualMin()
 end
 
 local originalGrantStamina = (function()
-    local env = (typeof(getgenv) == "function" and getgenv()) or _G
     if not env.__ForsakenGrantOriginal then
         env.__ForsakenGrantOriginal = function(amount)
             Sprinting.Stamina = math.min((Sprinting.Stamina or 0) + amount, Sprinting.MaxStamina)
@@ -225,6 +306,10 @@ end
 pcall(function()
     Network.SetConnection("GrantStamina", "REMOTE_EVENT", wrappedGrantStamina)
 end)
+
+function Player:SetGodMode(enabled)
+    GodState.Enabled = enabled
+end
 
 function Player:SetInfiniteStamina(enabled)
     InfStaminaState.Enabled = enabled
@@ -284,6 +369,76 @@ function Player:SetSilentFootsteps(enabled)
 end
 
 table.insert(Connections, RunService.Heartbeat:Connect(function(dt)
+    if GodState.Enabled then
+        pcall(function()
+            local ch, hum, root = godGetParts()
+            if not ch then
+                return
+            end
+
+            if ch ~= godLastChar then
+                godLastChar = ch
+                godLastPos, godLastSafe = nil, nil
+                godStillFor, godAcc = 0, 0
+                godMotionCooldown = GOD.stopCooldown
+            end
+
+            local pos = root.Position
+            if godLastPos and (pos - godLastPos).Magnitude > 4 then
+                godExternalUntil = os.clock() + GOD.tpPause
+            end
+            godLastPos = pos
+
+            local paused = root.Anchored or os.clock() < godExternalUntil
+
+            if godLastSafe and not paused and (godLastSafe.Y - pos.Y) > GOD.dropShield then
+                root.AssemblyLinearVelocity = Vector3.zero
+                root.CFrame = CFrame.new(godLastSafe) * (root.CFrame - root.CFrame.Position)
+                pos = godLastSafe
+            end
+            if not paused then
+                godLastSafe = pos
+            end
+
+            local movingInput = hum.MoveDirection.Magnitude > 0.01
+            godMotionCooldown = movingInput and GOD.stopCooldown or (godMotionCooldown - dt)
+
+            if not paused and ch:HasTag("Replicating") and not movingInput and godMotionCooldown <= 0 then
+                if godIsStill(hum, root) then
+                    godStillFor += dt
+                else
+                    godStillFor = 0
+                end
+
+                if godStillFor >= GOD.stillTime and os.clock() >= godHoldUntil then
+                    local qh = ch:FindFirstChild("QueryHitbox")
+                    local needs = true
+                    if qh then
+                        local qpos = qh.Position
+                        needs = (qpos - pos).Magnitude <= GOD.maxDist
+                            and (math.abs(qpos.Y - GOD.fakeY) > 2
+                                or (Vector3.new(qpos.X, 0, qpos.Z) - Vector3.new(pos.X, 0, pos.Z)).Magnitude > GOD.refreshDist)
+                    end
+                    if needs then
+                        godAcc += dt
+                        if godAcc >= GOD.interval then
+                            godAcc = 0
+                            godSendPacket(hum, root)
+                            godHoldUntil = os.clock() + 0.3
+                        end
+                    else
+                        godAcc = 0
+                    end
+                else
+                    godAcc = 0
+                end
+            else
+                godStillFor = 0
+                godAcc = 0
+            end
+        end)
+    end
+
     if StaminaThreshold > 0 and Sprinting.IsSprinting and (Sprinting.Stamina or 0) <= StaminaThreshold then
         stopSprint()
     end
@@ -441,6 +596,7 @@ end)
 
 function Player:Unload()
     Running = false
+    GodState.Enabled = false
     InfStaminaState.Enabled = false
     FootstepsState.Enabled = false
     stopInvisibility()
@@ -455,6 +611,13 @@ function Player:Unload()
     pcall(function()
         Network.SetConnection("GrantStamina", "REMOTE_EVENT", originalGrantStamina)
     end)
+
+    for _, conn in ipairs(Connections) do
+        pcall(function()
+            conn:Disconnect()
+        end)
+    end
+    table.clear(Connections)
 end
 
 return Player
