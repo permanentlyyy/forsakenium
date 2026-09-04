@@ -42,6 +42,12 @@ local parkBuffer = (function(bytes)
     return b
 end)(PARK_BYTES)
 
+local function fireParkPacket()
+    pcall(function()
+        Event:FireServer(1, { [LocalPlayer.UserId] = parkBuffer })
+    end)
+end
+
 local function isParkPacket(buf)
     if typeof(buf) ~= "buffer" or buffer.len(buf) ~= #PARK_BYTES then
         return false
@@ -61,8 +67,19 @@ if not State.Hooked then
         local method = getnamecallmethod()
         if State.Enabled and self == Event and (method == "FireServer" or method == "fireServer") then
             local args = { ... }
-            if args[1] == 1 and typeof(args[2]) == "table" and isParkPacket(args[2][1]) then
-                return oldNamecall(self, ...)
+            if args[1] == 1 and typeof(args[2]) == "table" then
+                local valid = false
+                for _, v in pairs(args[2]) do
+                    if isParkPacket(v) then
+                        valid = true
+                    else
+                        valid = false
+                        break
+                    end
+                end
+                if valid then
+                    return oldNamecall(self, ...)
+                end
             end
             return
         end
@@ -127,7 +144,7 @@ task.spawn(function()
                     end
 
                     if stillTicks >= STILL_TICKS and not parked then
-                        Event:FireServer(1, { parkBuffer })
+                        Event:FireServer(1, { [LocalPlayer.UserId] = parkBuffer })
                         parked = true
                         stillTicks, lastPos = 0, nil
                     end
@@ -154,7 +171,7 @@ function Player:SetGodMode(enabled)
         local char = LocalPlayer.Character
         local hrp = char and char.PrimaryPart
         if hrp and hrp.AssemblyLinearVelocity.Magnitude < 1 then
-            Event:FireServer(1, { parkBuffer })
+            Event:FireServer(1, { [LocalPlayer.UserId] = parkBuffer })
         end
     end
 end
