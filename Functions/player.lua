@@ -3,17 +3,17 @@ local Player = {}
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 
 local Event = ReplicatedStorage.Modules.Network.Network.UnreliableRemoteEvent
 local Network = require(ReplicatedStorage.Modules.Network.Network)
+local Sprinting = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
 
 local RETURN_RADIUS = 100
 local STILL_TICKS = 3
 local TICK_RATE = 0.1
-
-local PARK_BYTES = { 10, 75, 0, 0, 0, 123, 34, 109, 34, 58, 110, 117, 108, 108, 44, 34, 116, 34, 58, 34, 98, 117, 102, 102, 101, 114, 34, 44, 34, 98, 97, 115, 101, 54, 52, 34, 58, 34, 65, 65, 65, 65, 65, 65, 65, 65, 101, 115, 81, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 80, 68, 89, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 34, 125 }
 
 local env = (typeof(getgenv) == "function" and getgenv()) or _G
 
@@ -34,30 +34,59 @@ if State.Connections then
 end
 State.Connections = {}
 
-local parkBuffer = (function(bytes)
-    local b = buffer.create(#bytes)
-    for i = 1, #bytes do
-        buffer.writeu8(b, i - 1, bytes[i])
-    end
+local function createUndergroundBuffer()
+    local b = buffer.create(30)
+    buffer.writef32(b, 0, 0)
+    buffer.writef32(b, 4, -1000)
+    buffer.writef32(b, 8, 0)
+    buffer.writei16(b, 12, 0)
+    buffer.writei16(b, 14, 0)
+    buffer.writei16(b, 16, 0)
+    buffer.writef32(b, 18, 0)
+    buffer.writef32(b, 22, 0)
+    buffer.writef32(b, 26, 0)
     return b
-end)(PARK_BYTES)
+end
+
+local RawParkBuffer = createUndergroundBuffer()
+
+local function isUndergroundBuffer(buf)
+    if typeof(buf) ~= "buffer" or buffer.len(buf) < 30 then
+        return false
+    end
+    return buffer.readf32(buf, 0) == 0
+        and buffer.readf32(buf, 4) == -1000
+        and buffer.readf32(buf, 8) == 0
+end
+
+local function wireValueIsUnderground(value)
+    if typeof(value) ~= "buffer" then
+        return false
+    end
+    if isUndergroundBuffer(value) then
+        return true
+    end
+
+    local ok, result = pcall(function()
+        local json = buffer.readstring(value, 0, buffer.len(value))
+        local data = HttpService:JSONDecode(json)
+        if data and data.t == "buffer" and data.base64 then
+            return buffer.frombase64(data.base64)
+        end
+        return nil
+    end)
+
+    if not ok or not result then
+        return false
+    end
+
+    return isUndergroundBuffer(result)
+end
 
 local function fireParkPacket()
     pcall(function()
-        Event:FireServer(1, { [LocalPlayer.UserId] = parkBuffer })
+        Network:FireServerConnection("UpdateCharacterPosition", "UREMOTE_EVENT", RawParkBuffer)
     end)
-end
-
-local function isParkPacket(buf)
-    if typeof(buf) ~= "buffer" or buffer.len(buf) ~= #PARK_BYTES then
-        return false
-    end
-    for i = 1, #PARK_BYTES do
-        if buffer.readu8(buf, i - 1) ~= PARK_BYTES[i] then
-            return false
-        end
-    end
-    return true
 end
 
 if not State.Hooked then
@@ -70,7 +99,7 @@ if not State.Hooked then
             if args[1] == 1 and typeof(args[2]) == "table" then
                 local valid = false
                 for _, v in pairs(args[2]) do
-                    if isParkPacket(v) then
+                    if wireValueIsUnderground(v) then
                         valid = true
                     else
                         valid = false
@@ -87,7 +116,7 @@ if not State.Hooked then
     end)
 end
 
-local hitbox, stillTicks, lastPos = nil, 0, nil
+local stillTicks, lastPos = 0, nil
 local parked = false
 local Running = true
 
@@ -106,56 +135,35 @@ local function applyFootstepsMuted(char)
     end
 end
 
-local function grabHitbox(char)
-    task.spawn(function()
-        hitbox = char:WaitForChild("QueryHitbox", 10)
-    end)
-end
-
-if LocalPlayer.Character then
-    grabHitbox(LocalPlayer.Character)
-end
-
 task.spawn(function()
     while Running do
         task.wait(TICK_RATE)
         if State.Enabled then
-            local ok = pcall(function()
+            pcall(function()
                 local char = LocalPlayer.Character
                 if not char then
                     return
                 end
-                if not hitbox or not hitbox.Parent then
-                    hitbox = char:FindFirstChild("QueryHitbox")
-                end
                 local hrp = char.PrimaryPart
-                if not (hitbox and hrp) then
+                if not hrp then
                     return
                 end
-                if (hitbox.Position - hrp.Position).Magnitude <= RETURN_RADIUS then
-                    local still = hrp.AssemblyLinearVelocity.Magnitude < 1
-                        and lastPos ~= nil
-                        and (hrp.Position - lastPos).Magnitude < 0.1
-                    lastPos = hrp.Position
-                    stillTicks = still and (stillTicks + 1) or 0
-
-                    if hrp.AssemblyLinearVelocity.Magnitude >= 1 then
-                        parked = false
-                    end
-
-                    if stillTicks >= STILL_TICKS and not parked then
-                        Event:FireServer(1, { [LocalPlayer.UserId] = parkBuffer })
-                        parked = true
-                        stillTicks, lastPos = 0, nil
-                    end
-                else
+                if hrp.AssemblyLinearVelocity.Magnitude >= 1 then
                     parked = false
+                end
+
+                local still = hrp.AssemblyLinearVelocity.Magnitude < 1
+                    and lastPos ~= nil
+                    and (hrp.Position - lastPos).Magnitude < 0.1
+                lastPos = hrp.Position
+                stillTicks = still and (stillTicks + 1) or 0
+
+                if stillTicks >= STILL_TICKS and not parked then
+                    fireParkPacket()
+                    parked = true
                     stillTicks, lastPos = 0, nil
                 end
             end)
-            if not ok then
-                hitbox = nil
-            end
         end
     end
 end)
@@ -165,14 +173,11 @@ function Player:SetGodMode(enabled)
         return
     end
     State.Enabled = enabled
-    stillTicks, lastPos = 0, nil
 
     if enabled then
-        local char = LocalPlayer.Character
-        local hrp = char and char.PrimaryPart
-        if hrp and hrp.AssemblyLinearVelocity.Magnitude < 1 then
-            Event:FireServer(1, { [LocalPlayer.UserId] = parkBuffer })
-        end
+        stillTicks, lastPos = 0, nil
+        parked = false
+        task.delay(0.25, fireParkPacket)
     end
 end
 
@@ -218,7 +223,6 @@ end
 local function setupInvisibility(character)
     local humanoid = character:WaitForChild("Humanoid", 10)
     if not humanoid then
-        warn("[Forsakenium] Invisibility: no humanoid")
         return
     end
 
@@ -235,7 +239,6 @@ local function setupInvisibility(character)
         return animator:LoadAnimation(animation)
     end)
     if not ok or not track then
-        warn("[Forsakenium] Invisibility: load failed " .. tostring(track))
         return
     end
 
@@ -281,44 +284,6 @@ function Player:SetInvisibility(enabled)
         end
     end
 end
-
-local Sprinting = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
-
-local InfStaminaState = { Enabled = false }
-local LegitViewState = { Enabled = false, Screen = nil, Label = nil }
-
-local virtual = 0
-local virtualTimer = 0
-local virtualPenalty = false
-local virtualExhausted = false
-local baseline = 0
-local prevCap = nil
-local capBaseVirtual = nil
-
-local function virtualMax()
-    return Sprinting.StaminaCap or Sprinting.MaxStamina or 100
-end
-
-local function virtualMin()
-    return Sprinting.MinStamina or 0
-end
-
-local originalGrantStamina = env.__ForsakenGrantOriginal
-if not originalGrantStamina then
-    originalGrantStamina = function(amount)
-        Sprinting.Stamina = math.min((Sprinting.Stamina or 0) + amount, Sprinting.MaxStamina)
-    end
-    env.__ForsakenGrantOriginal = originalGrantStamina
-end
-
-local wrappedGrantStamina = function(amount)
-    originalGrantStamina(amount)
-    virtual = math.min(virtual + amount, virtualMax())
-end
-
-pcall(function()
-    Network.SetConnection("GrantStamina", "REMOTE_EVENT", wrappedGrantStamina)
-end)
 
 local AlwaysSprintState = {
     Enabled = false
@@ -367,6 +332,107 @@ function Player:SetAlwaysSprint(enabled)
     else
         stopSprint()
     end
+end
+
+function Player:SetStaminaManagement(threshold)
+    StaminaThreshold = threshold or 0
+
+    if StaminaThreshold > 0 and Sprinting.IsSprinting and (Sprinting.Stamina or 0) <= StaminaThreshold then
+        stopSprint()
+    end
+end
+
+local InfStaminaState = { Enabled = false }
+local LegitViewState = { Enabled = false, Screen = nil, Label = nil }
+
+local virtual = 0
+local virtualTimer = 0
+local virtualPenalty = false
+local virtualExhausted = false
+local baseline = 0
+local prevCap = nil
+local capBaseVirtual = nil
+
+local function virtualMax()
+    return Sprinting.StaminaCap or Sprinting.MaxStamina or 100
+end
+
+local function virtualMin()
+    return Sprinting.MinStamina or 0
+end
+
+local originalGrantStamina = env.__ForsakenGrantOriginal
+if not originalGrantStamina then
+    originalGrantStamina = function(amount)
+        Sprinting.Stamina = math.min((Sprinting.Stamina or 0) + amount, Sprinting.MaxStamina)
+    end
+    env.__ForsakenGrantOriginal = originalGrantStamina
+end
+
+local wrappedGrantStamina = function(amount)
+    originalGrantStamina(amount)
+    virtual = math.min(virtual + amount, virtualMax())
+end
+
+pcall(function()
+    Network.SetConnection("GrantStamina", "REMOTE_EVENT", wrappedGrantStamina)
+end)
+
+function Player:SetInfiniteStamina(enabled)
+    InfStaminaState.Enabled = enabled
+end
+
+function Player:SetShowLegitStaminaView(enabled)
+    LegitViewState.Enabled = enabled
+
+    if enabled then
+        local gui = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
+        if not gui then
+            return
+        end
+
+        local screen = Instance.new("ScreenGui")
+        screen.Name = "ForsakeniumSecondaryStamina"
+        screen.ResetOnSpawn = false
+        screen.IgnoreGuiInset = true
+        screen.DisplayOrder = 10000
+        screen.Parent = gui
+
+        local number = Instance.new("TextLabel")
+        number.Name = "SecondaryStaminaNumber"
+        number.AnchorPoint = Vector2.new(0.5, 0.5)
+        number.Position = UDim2.fromScale(0.5, 0.5)
+        number.Size = UDim2.new(0, 220, 0, 64)
+        number.BackgroundTransparency = 1
+        number.Font = Enum.Font.GothamBold
+        number.TextColor3 = Color3.fromRGB(220, 230, 240)
+        number.TextStrokeColor3 = Color3.fromRGB(20, 24, 32)
+        number.TextStrokeTransparency = 0.25
+        number.TextSize = 28
+        number.TextXAlignment = Enum.TextXAlignment.Center
+        number.TextYAlignment = Enum.TextYAlignment.Center
+        number.Parent = screen
+
+        LegitViewState.Screen = screen
+        LegitViewState.Label = number
+
+        virtual = Sprinting.Stamina or virtualMax()
+        virtualTimer = Sprinting.timeUntilStaminaRecovers or 0
+    else
+        if LegitViewState.Screen then
+            LegitViewState.Screen:Destroy()
+        end
+        LegitViewState.Screen = nil
+        LegitViewState.Label = nil
+    end
+end
+
+function Player:SetSilentFootsteps(enabled)
+    if FootstepsState.Enabled == enabled then
+        return
+    end
+    FootstepsState.Enabled = enabled
+    applyFootstepsMuted(LocalPlayer.Character)
 end
 
 table.insert(State.Connections, RunService.Heartbeat:Connect(function(dt)
@@ -499,15 +565,23 @@ table.insert(State.Connections, RunService.Heartbeat:Connect(function(dt)
 end))
 
 table.insert(State.Connections, LocalPlayer.CharacterAdded:Connect(function(char)
-    hitbox, stillTicks, lastPos = nil, 0, nil
-    parked = false
-    grabHitbox(char)
     task.delay(0.1, applyFootstepsMuted, char)
 
     virtual = virtualMax()
     virtualTimer = 0
     virtualPenalty = false
     virtualExhausted = false
+
+    if State.Enabled then
+        parked = false
+        stillTicks, lastPos = 0, nil
+        task.delay(1, function()
+            if State.Enabled then
+                fireParkPacket()
+                parked = true
+            end
+        end)
+    end
 end))
 
 task.spawn(function()
@@ -527,71 +601,6 @@ task.spawn(function()
         end)
     end
 end)
-
-function Player:SetSilentFootsteps(enabled)
-    if FootstepsState.Enabled == enabled then
-        return
-    end
-    FootstepsState.Enabled = enabled
-    applyFootstepsMuted(LocalPlayer.Character)
-end
-
-function Player:SetStaminaManagement(threshold)
-    StaminaThreshold = threshold or 0
-
-    if StaminaThreshold > 0 and Sprinting.IsSprinting and (Sprinting.Stamina or 0) <= StaminaThreshold then
-        stopSprint()
-    end
-end
-
-function Player:SetInfiniteStamina(enabled)
-    InfStaminaState.Enabled = enabled
-end
-
-function Player:SetShowLegitStaminaView(enabled)
-    LegitViewState.Enabled = enabled
-
-    if enabled then
-        local gui = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
-        if not gui then
-            return
-        end
-
-        local screen = Instance.new("ScreenGui")
-        screen.Name = "ForsakeniumSecondaryStamina"
-        screen.ResetOnSpawn = false
-        screen.IgnoreGuiInset = true
-        screen.DisplayOrder = 10000
-        screen.Parent = gui
-
-        local number = Instance.new("TextLabel")
-        number.Name = "SecondaryStaminaNumber"
-        number.AnchorPoint = Vector2.new(0.5, 0.5)
-        number.Position = UDim2.fromScale(0.5, 0.5)
-        number.Size = UDim2.new(0, 220, 0, 64)
-        number.BackgroundTransparency = 1
-        number.Font = Enum.Font.GothamBold
-        number.TextColor3 = Color3.fromRGB(220, 230, 240)
-        number.TextStrokeColor3 = Color3.fromRGB(20, 24, 32)
-        number.TextStrokeTransparency = 0.25
-        number.TextSize = 28
-        number.TextXAlignment = Enum.TextXAlignment.Center
-        number.TextYAlignment = Enum.TextYAlignment.Center
-        number.Parent = screen
-
-        LegitViewState.Screen = screen
-        LegitViewState.Label = number
-
-        virtual = Sprinting.Stamina or virtualMax()
-        virtualTimer = Sprinting.timeUntilStaminaRecovers or 0
-    else
-        if LegitViewState.Screen then
-            LegitViewState.Screen:Destroy()
-        end
-        LegitViewState.Screen = nil
-        LegitViewState.Label = nil
-    end
-end
 
 function Player:Unload()
     Running = false
