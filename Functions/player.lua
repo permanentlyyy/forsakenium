@@ -22,6 +22,11 @@ if not GodState then
 end
 GodState.Enabled = false
 
+local LegacyParkState = env.__ForsakenParkState
+if LegacyParkState then
+    LegacyParkState.Enabled = false
+end
+
 local GOD = {
     fakeY = -1000,
     interval = 0.1,
@@ -44,15 +49,13 @@ end)()
 local godAcc, godStillFor, godMotionCooldown = 0, 0, 0
 local godLastPos, godLastSafe, godLastChar = nil, nil, nil
 local godExternalUntil, godHoldUntil = 0, 0
+local godStill = false
 
-if not env.__ForsakenGodHooked then
-    env.__ForsakenGodHooked = true
-    Network.FireServerConnection = function(self, name, typ, ...)
-        if GodState.Enabled and name == "UpdateCharacterPosition" then
-            return
-        end
-        return originalFire(self, name, typ, ...)
+Network.FireServerConnection = function(self, name, typ, ...)
+    if GodState.Enabled and name == "UpdateCharacterPosition" then
+        return
     end
+    return originalFire(self, name, typ, ...)
 end
 
 local function godGetParts()
@@ -391,7 +394,7 @@ table.insert(Connections, RunService.Heartbeat:Connect(function(dt)
 
             local paused = root.Anchored or os.clock() < godExternalUntil
 
-            if godLastSafe and not paused and (godLastSafe.Y - pos.Y) > GOD.dropShield then
+            if godLastSafe and godStill and not paused and (godLastSafe.Y - pos.Y) > GOD.dropShield then
                 root.AssemblyLinearVelocity = Vector3.zero
                 root.CFrame = CFrame.new(godLastSafe) * (root.CFrame - root.CFrame.Position)
                 pos = godLastSafe
@@ -409,6 +412,7 @@ table.insert(Connections, RunService.Heartbeat:Connect(function(dt)
                 else
                     godStillFor = 0
                 end
+                godStill = godStillFor >= GOD.stillTime
 
                 if godStillFor >= GOD.stillTime and os.clock() >= godHoldUntil then
                     local qh = ch:FindFirstChild("QueryHitbox")
@@ -434,6 +438,7 @@ table.insert(Connections, RunService.Heartbeat:Connect(function(dt)
                 end
             else
                 godStillFor = 0
+                godStill = false
                 godAcc = 0
             end
         end)
@@ -611,6 +616,8 @@ function Player:Unload()
     pcall(function()
         Network.SetConnection("GrantStamina", "REMOTE_EVENT", originalGrantStamina)
     end)
+
+    Network.FireServerConnection = originalFire
 
     for _, conn in ipairs(Connections) do
         pcall(function()
