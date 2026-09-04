@@ -71,6 +71,7 @@ if not State.Hooked then
 end
 
 local hitbox, stillTicks, lastPos = nil, 0, nil
+local parked = false
 local Running = true
 
 local FootstepsState = {
@@ -98,17 +99,6 @@ if LocalPlayer.Character then
     grabHitbox(LocalPlayer.Character)
 end
 
-table.insert(State.Connections, LocalPlayer.CharacterAdded:Connect(function(char)
-    hitbox, stillTicks, lastPos = nil, 0, nil
-    grabHitbox(char)
-    task.delay(0.1, applyFootstepsMuted, char)
-
-    virtual = virtualMax()
-    virtualTimer = 0
-    virtualPenalty = false
-    virtualExhausted = false
-end))
-
 task.spawn(function()
     while Running do
         task.wait(TICK_RATE)
@@ -131,11 +121,18 @@ task.spawn(function()
                         and (hrp.Position - lastPos).Magnitude < 0.1
                     lastPos = hrp.Position
                     stillTicks = still and (stillTicks + 1) or 0
-                    if stillTicks >= STILL_TICKS then
+
+                    if hrp.AssemblyLinearVelocity.Magnitude >= 1 then
+                        parked = false
+                    end
+
+                    if stillTicks >= STILL_TICKS and not parked then
                         Event:FireServer(1, { parkBuffer })
+                        parked = true
                         stillTicks, lastPos = 0, nil
                     end
                 else
+                    parked = false
                     stillTicks, lastPos = 0, nil
                 end
             end)
@@ -464,6 +461,7 @@ table.insert(State.Connections, RunService.Heartbeat:Connect(function(dt)
 
         if virtualTimer <= 0
             and not virtualPenalty
+            and not realDraining
             and not char:GetAttribute("AbilityStaminaOverride")
             and not char:GetAttribute("StaminaPenaltyActive")
         then
@@ -481,6 +479,18 @@ table.insert(State.Connections, RunService.Heartbeat:Connect(function(dt)
             and Color3.fromRGB(255, 105, 105)
             or Color3.fromRGB(220, 230, 240)
     end
+end))
+
+table.insert(State.Connections, LocalPlayer.CharacterAdded:Connect(function(char)
+    hitbox, stillTicks, lastPos = nil, 0, nil
+    parked = false
+    grabHitbox(char)
+    task.delay(0.1, applyFootstepsMuted, char)
+
+    virtual = virtualMax()
+    virtualTimer = 0
+    virtualPenalty = false
+    virtualExhausted = false
 end))
 
 task.spawn(function()
