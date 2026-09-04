@@ -29,8 +29,8 @@ end
 
 local GOD = {
     fakeY = -1000,
-    interval = 0.1,
-    stillTime = 0.06,
+    interval = 0,
+    stillTime = 0,
     velThreshold = 0.1,
     stopCooldown = 0,
     tpPause = 0.25,
